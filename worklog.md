@@ -1,7 +1,7 @@
 # Liquid Home RDC — Recreation Worklog
 
 ## Project Overview
-Faithful recreation of https://cd.liquidhome.tech (Liquid Home RDC, a fiber internet ISP in Democratic Republic of Congo) using Next.js 16, TypeScript, Tailwind CSS 4, and shadcn/ui.
+Faithful recreation of https://cd.liquidhome.tech (Liquid Home RDC, a fiber internet ISP in Democratic Republic of Congo) using Next.js 16.3.1, TypeScript, Tailwind CSS 4, and shadcn/ui.
 
 ## Task ID: ALL
 Agent: main (orchestrator)
@@ -56,3 +56,59 @@ Unresolved / Future Work:
 - Customer portal (MyLiquid) full implementation with auth + dashboard
 - Complaint modal not yet built (API route exists, but modal UI not added)
 - Could add more polish: animations between page transitions, skeleton loaders
+
+---
+Task ID: 2
+Agent: main (orchestrator)
+Task: Update to latest Next.js, center nav menu, add real interactive Google-style map with KMZ coverage overlay on signup page
+
+Work Log:
+- Upgraded Next.js from 16.1.3 to 16.3.1 (latest stable on npm — there is no "Next.js 22"; the current major version line is 16.x)
+- Added `allowedDevOrigins` to next.config.ts for preview domain
+- Installed `react-leaflet@5.0.0`, `leaflet@1.9.4`, and `@types/leaflet@1.9.22` for real interactive map
+- Centered the navigation menu in SiteHeader: changed layout to 3-zone (logo left | nav absolutely centered | Souscrire CTA right) using `absolute left-1/2 -translate-x-1/2` on the `<nav>` element. Verified: nav_center_x=640, window_mid=640, offset=0px (perfectly centered)
+- Created coverage data file `src/lib/coverage.ts` with 12 Kinshasa commune coverage zones (8 available: Gombe, Ngaliema, Kintambo, Bandalungwa, Kasa-Vubu, Limete, Lemba, Ngiri-Ngiri, Kinshasa Centre; 3 coming-soon: Selembao, Bumbu, Makala). Includes `findZoneAt()` point-in-polygon function for real coverage detection
+- Built `CoverageMap` component (`src/components/widgets/CoverageMap.tsx`) using react-leaflet v5:
+  - Real OpenStreetMap street tiles + Esri World Imagery satellite tiles with toggle button
+  - 12 coverage polygon overlays (orange = available, gray dashed = coming-soon) simulating KMZ overlay
+  - Draggable orange marker pin with popup showing GPS coordinates
+  - Click-to-place on map to set location
+  - 5 custom controls: Satellite/Plan toggle, Zoom +, Zoom -, Recenter on Kinshasa, Geolocation ("Ma position")
+  - Popups on coverage zones showing commune name + availability status
+  - Color legend below the map
+- Updated `SignupPage` to dynamically import CoverageMap with `ssr: false` (avoids Leaflet window reference during SSR)
+- Replaced the stylized fake map with the real Leaflet map in signup wizard step 1
+- Added real-time coverage status indicator: when user drags/clicks pin into a coverage zone, shows green "Fibre disponible" or orange "Bientôt disponible" with commune name
+- Added GPS coordinates display panel showing live lat/lng
+- Fixed hydration mismatch error: router now always initializes route="home" (matching server), then syncs from URL hash via deferred `Promise.resolve().then(() => setRoute(hash))` after hydration commit. Verified: 0 hydration errors in dev.log
+- Fixed react-leaflet v5 `useMap()` outside MapContainer error: moved all map-control components inside `<MapContainer>` as children (MapControls component renders absolutely-positioned buttons via `.leaflet-top` classes)
+
+Stage Summary:
+- Next.js updated to 16.3.1 (latest)
+- Navigation menu is perfectly centered (verified: 0px offset from window center)
+- Real interactive Leaflet map renders on signup page with:
+  - 6 OSM tiles loaded (HTTP 200)
+  - 12 coverage polygon paths (KMZ-style overlay)
+  - 1 draggable orange marker
+  - 5 interactive controls (satellite toggle, zoom +/-, recenter, geolocation)
+  - Map size 387x387px
+- Satellite toggle verified: clicking switches from OSM street tiles to Esri World Imagery (satellite) tiles
+- Coverage status indicator shows commune name + availability when pin is in a coverage zone
+- Zero hydration errors, zero page errors, clean lint
+- All original functionality preserved (all 11 routes, forms, carousel, etc.)
+
+Verification Results (agent-browser):
+- Nav centered: ✓ offset=0px (nav_center=640 = window_mid=640)
+- Signup page: ✓ H1 "Forfaits internet", H2 "Découvrez si vous pouvez bénéficier de nos services"
+- Map rendered: ✓ container=true, tiles=6, paths=12, markers=1, controls=5
+- Map controls: ✓ "Basculer carte/satellite | Zoom + | Zoom - | Recentrer sur Kinshasa | Utiliser ma position"
+- Satellite toggle: ✓ clicking switches to Esri World Imagery tiles (arcgis=true)
+- Hydration errors: ✓ 0 (fixed)
+- Page errors: ✓ none
+
+Unresolved / Future Work:
+- Could replace OpenStreetMap with actual Google Maps API if a valid API key is provided (currently using free OSM/Esri tiles which are visually equivalent)
+- Could load a real .kmz file from the original site if the URL is known (currently using programmatically-defined coverage polygons based on Kinshasa commune boundaries)
+- favicon.ico 404 (harmless — browser requests /favicon.ico by default, but we serve /favicon.png)
+- Customer portal (MyLiquid) full implementation with auth + dashboard
+- Complaint modal UI (API route exists, modal not yet built)

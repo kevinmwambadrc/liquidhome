@@ -94,12 +94,12 @@ export function SiteHeader() {
         </div>
       </div>
 
-      {/* Main nav row */}
-      <div className="max-w-7xl mx-auto px-4 flex items-center justify-between h-16 md:h-20">
-        {/* Logo */}
+      {/* Main nav row - logo left, nav centered, login right */}
+      <div className="max-w-7xl mx-auto px-4 relative flex items-center justify-between h-16 md:h-20">
+        {/* Logo - left */}
         <button
           onClick={() => handleNav("home")}
-          className="flex items-center"
+          className="flex items-center z-10"
           aria-label="Liquid Home - Accueil"
         >
           <Image
@@ -112,8 +112,8 @@ export function SiteHeader() {
           />
         </button>
 
-        {/* Desktop nav */}
-        <nav className="hidden md:flex items-center gap-1">
+        {/* Desktop nav - absolutely centered */}
+        <nav className="hidden md:flex items-center gap-1 absolute left-1/2 -translate-x-1/2">
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
             const active = route === item.route;
@@ -121,24 +121,34 @@ export function SiteHeader() {
               <button
                 key={item.route}
                 onClick={() => handleNav(item.route)}
-                className={`relative px-4 py-2 text-sm font-medium transition-colors flex items-center gap-2 ${
+                className={`relative px-5 py-2 text-sm font-medium transition-colors flex items-center gap-2 ${
                   active ? "text-white" : "text-white/85 hover:text-white"
                 }`}
               >
                 <Icon className="h-4 w-4" />
                 {item.label}
                 {active && (
-                  <span className="absolute -bottom-px left-4 right-4 h-0.5 bg-[#F89E3C] rounded-full" />
+                  <span className="absolute -bottom-px left-5 right-5 h-0.5 bg-[#F89E3C] rounded-full" />
                 )}
               </button>
             );
           })}
         </nav>
 
+        {/* Right side: Souscrire CTA (desktop) */}
+        <div className="hidden md:flex items-center z-10">
+          <button
+            onClick={() => handleNav("signup")}
+            className="btn-brand text-xs px-4 py-2"
+          >
+            Souscrire
+          </button>
+        </div>
+
         {/* Mobile menu button */}
         <button
           onClick={() => setMobileOpen((v) => !v)}
-          className="md:hidden p-2 text-white"
+          className="md:hidden p-2 text-white z-10"
           aria-label="Menu"
         >
           {mobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}

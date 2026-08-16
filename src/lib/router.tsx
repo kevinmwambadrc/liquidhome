@@ -45,14 +45,10 @@ const VALID_ROUTES: Route[] = [
   "terms-and-conditions",
 ];
 
-function getInitialRoute(): Route {
-  if (typeof window === "undefined") return "home";
-  const hash = window.location.hash.replace("#", "") as Route;
-  return VALID_ROUTES.includes(hash) ? hash : "home";
-}
-
 export function RouterProvider({ children }: { children: ReactNode }) {
-  const [route, setRoute] = useState<Route>(getInitialRoute);
+  // Always initialize to "home" so server and client render identically.
+  // The actual hash route is applied after hydration via a deferred effect.
+  const [route, setRoute] = useState<Route>("home");
   const [siteType, setSiteType] = useState<SiteType>("home");
   const [language, setLanguage] = useState<Language>("fr");
   const [signupPackage, setSignupPackage] = useState<string | undefined>(undefined);
@@ -69,6 +65,16 @@ export function RouterProvider({ children }: { children: ReactNode }) {
       if (window.location.hash !== newHash) {
         window.history.replaceState(null, "", newHash || window.location.pathname);
       }
+    }
+  }, []);
+
+  // Sync route from URL hash after hydration (deferred to avoid hydration mismatch)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const hash = window.location.hash.replace("#", "") as Route;
+    if (VALID_ROUTES.includes(hash)) {
+      // Defer the state update to after the hydration commit
+      Promise.resolve().then(() => setRoute(hash));
     }
   }, []);
 

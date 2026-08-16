@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import { PageBanner } from "@/components/sections/PageBanner";
 import { useRouter } from "@/lib/router";
 import { PACKAGES } from "@/lib/content";
+import type { CoverageZone } from "@/lib/coverage";
+import { KINSHASA_CENTER } from "@/lib/coverage";
 import {
   MapPin,
-  LocateFixed,
   Lock,
   Check,
   ChevronRight,
@@ -20,7 +22,22 @@ import {
   Wifi,
   PartyPopper,
   Calendar,
+  XCircle,
+  MapPinned,
 } from "lucide-react";
+
+// Dynamically import the real Leaflet map (client-only, no SSR)
+const CoverageMap = dynamic(() => import("@/components/widgets/CoverageMap"), {
+  ssr: false,
+  loading: () => (
+    <div className="aspect-square w-full rounded-lg overflow-hidden border-2 border-gray-200 bg-gray-100 flex items-center justify-center">
+      <div className="text-center">
+        <MapPin className="h-8 w-8 text-brand-orange mx-auto mb-2 animate-pulse" />
+        <p className="text-sm text-brand-muted">Chargement de la carte...</p>
+      </div>
+    </div>
+  ),
+});
 
 const STEPS = [
   { id: "location", label: "Location" },
@@ -36,7 +53,11 @@ export function SignupPage() {
   // Step 1 - location
   const [street, setStreet] = useState("");
   const [houseNo, setHouseNo] = useState("");
-  const [pinPos, setPinPos] = useState({ x: 50, y: 50 });
+  const [mapPos, setMapPos] = useState<{ lat: number; lng: number }>({
+    lat: KINSHASA_CENTER[0],
+    lng: KINSHASA_CENTER[1],
+  });
+  const [currentZone, setCurrentZone] = useState<CoverageZone | null>(null);
   const [checking, setChecking] = useState(false);
 
   // Step 2 - offer
@@ -59,7 +80,7 @@ export function SignupPage() {
   const onCheckLocation = async () => {
     if (!street.trim() || !houseNo.trim()) return;
     setChecking(true);
-    // Simulate API call
+    // Simulate API call to verify coverage based on map position
     await new Promise((r) => setTimeout(r, 1200));
     setChecking(false);
     setStep(1);
@@ -96,6 +117,8 @@ export function SignupPage() {
     setStep(0);
     setStreet("");
     setHouseNo("");
+    setMapPos({ lat: KINSHASA_CENTER[0], lng: KINSHASA_CENTER[1] });
+    setCurrentZone(null);
     setSelectedPkg(undefined);
     setDetails({
       first_name: "",
@@ -176,33 +199,9 @@ export function SignupPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Form */}
                   <div className="space-y-4">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        // Simulate geolocation - center pin
-                        setPinPos({ x: 50 + (Math.random() - 0.5) * 10, y: 50 + (Math.random() - 0.5) * 10 });
-                      }}
-                      className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-md bg-brand-navy text-white font-semibold text-sm hover:bg-brand-navy-light transition-colors"
-                    >
-                      <LocateFixed className="h-4 w-4" />
-                      Utiliser ma location
-                    </button>
-                    <p className="text-xs text-brand-muted text-center -mt-2">
-                      Recommandé pour des informations exactes sur la couverture
-                    </p>
-
-                    <div className="relative">
-                      <div className="absolute left-0 right-0 flex items-center">
-                        <span className="w-full border-t border-gray-200" />
-                      </div>
-                      <div className="relative flex justify-center text-xs">
-                        <span className="bg-white px-3 text-brand-muted uppercase">OU</span>
-                      </div>
-                    </div>
-
                     <div>
                       <label className="block text-sm font-medium text-brand-navy mb-2">
-                        Adresse de la Rue
+                        Adresse de la Rue <span className="text-brand-orange">*</span>
                       </label>
                       <div className="relative">
                         <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-brand-muted" />
@@ -218,7 +217,7 @@ export function SignupPage() {
 
                     <div>
                       <label className="block text-sm font-medium text-brand-navy mb-2">
-                        N° de la Maison
+                        N° de la Maison <span className="text-brand-orange">*</span>
                       </label>
                       <div className="relative">
                         <HomeIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-brand-muted" />
@@ -231,6 +230,33 @@ export function SignupPage() {
                         />
                       </div>
                     </div>
+
+                    {/* Coverage status indicator */}
+                    {currentZone && (
+                      <div
+                        className={`rounded-md border p-3 flex items-start gap-2 ${
+                          currentZone.status === "available"
+                            ? "bg-green-50 border-green-200 text-green-800"
+                            : "bg-orange-50 border-orange-200 text-orange-800"
+                        }`}
+                      >
+                        {currentZone.status === "available" ? (
+                          <CheckCircle2 className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                        ) : (
+                          <XCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                        )}
+                        <div className="text-sm">
+                          <p className="font-semibold">
+                            Commune : {currentZone.name}
+                          </p>
+                          {currentZone.status === "available" ? (
+                            <p>La fibre Liquid Home est disponible dans cette zone ! 🎉</p>
+                          ) : (
+                            <p>Cette zone sera bientôt couverte. Contactez-nous au 4757.</p>
+                          )}
+                        </div>
+                      </div>
+                    )}
 
                     <button
                       onClick={onCheckLocation}
@@ -249,71 +275,39 @@ export function SignupPage() {
                         </>
                       )}
                     </button>
+
+                    {/* Coordinates display */}
+                    <div className="bg-brand-soft rounded-md p-3 text-xs">
+                      <p className="text-brand-muted flex items-center gap-1.5 mb-1">
+                        <MapPinned className="h-3.5 w-3.5" />
+                        Coordonnées GPS sélectionnées
+                      </p>
+                      <p className="font-mono font-semibold text-brand-navy">
+                        {mapPos.lat.toFixed(5)}, {mapPos.lng.toFixed(5)}
+                      </p>
+                    </div>
                   </div>
 
-                  {/* Map */}
+                  {/* Real interactive map (Leaflet) */}
                   <div>
-                    <div className="text-sm font-medium text-brand-navy mb-2">
-                      Disponibilité
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="text-sm font-medium text-brand-navy">
+                        Disponibilité
+                      </div>
+                      <span className="text-[10px] uppercase tracking-wide text-brand-muted bg-brand-soft px-2 py-0.5 rounded">
+                        KMZ Couverture
+                      </span>
                     </div>
                     <p className="text-xs text-brand-muted mb-3">
-                      Vous pouvez glisser et déposer l'épingle sur la carte pour
-                      choisir avec précision votre emplacement.
+                      Glissez et déposez l&apos;épingle orange sur la carte pour
+                      choisir avec précision votre emplacement. Les zones orange
+                      indiquent les communes couvertes par la fibre.
                     </p>
-                    <div
-                      className="relative aspect-square w-full rounded-lg overflow-hidden border-2 border-gray-200 cursor-crosshair"
-                      style={{
-                        background:
-                          "linear-gradient(135deg, #e8eef5 0%, #d6e4f0 50%, #c9dde8 100%)",
-                      }}
-                      onMouseMove={(e) => {
-                        if (e.buttons === 1) {
-                          const rect = e.currentTarget.getBoundingClientRect();
-                          const x = ((e.clientX - rect.left) / rect.width) * 100;
-                          const y = ((e.clientY - rect.top) / rect.height) * 100;
-                          setPinPos({
-                            x: Math.max(5, Math.min(95, x)),
-                            y: Math.max(5, Math.min(95, y)),
-                          });
-                        }
-                      }}
-                      onClick={(e) => {
-                        const rect = e.currentTarget.getBoundingClientRect();
-                        const x = ((e.clientX - rect.left) / rect.width) * 100;
-                        const y = ((e.clientY - rect.top) / rect.height) * 100;
-                        setPinPos({ x, y });
-                      }}
-                    >
-                      {/* Grid streets */}
-                      <div
-                        className="absolute inset-0 opacity-30"
-                        style={{
-                          backgroundImage:
-                            "linear-gradient(#9bb5cf 2px, transparent 2px), linear-gradient(90deg, #9bb5cf 2px, transparent 2px)",
-                          backgroundSize: "40px 40px",
-                        }}
-                      />
-                      {/* River */}
-                      <div className="absolute top-1/3 left-0 right-0 h-8 bg-[#a8c8e0] opacity-50 rotate-3" />
-                      {/* Coverage circle */}
-                      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-40 w-40 rounded-full bg-brand-orange/20 border-2 border-dashed border-brand-orange/50" />
-                      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-24 w-24 rounded-full bg-brand-orange/30" />
-                      {/* Pin */}
-                      <button
-                        className="absolute -translate-x-1/2 -translate-y-full z-10 text-brand-orange hover:scale-110 transition-transform cursor-grab active:cursor-grabbing"
-                        style={{ left: `${pinPos.x}%`, top: `${pinPos.y}%` }}
-                        aria-label="Déplacer l'épingle"
-                      >
-                        <MapPin className="h-9 w-9 drop-shadow-lg" fill="currentColor" />
-                      </button>
-                      {/* Label */}
-                      <div className="absolute bottom-2 left-2 right-2 bg-white/95 backdrop-blur rounded-md px-3 py-2 text-xs">
-                        <p className="text-brand-muted">Position sélectionnée</p>
-                        <p className="font-bold text-brand-navy">
-                          {pinPos.x.toFixed(1)}, {pinPos.y.toFixed(1)}
-                        </p>
-                      </div>
-                    </div>
+                    <CoverageMap
+                      position={mapPos}
+                      onPositionChange={setMapPos}
+                      onZoneChange={setCurrentZone}
+                    />
                   </div>
                 </div>
               </div>
@@ -327,7 +321,15 @@ export function SignupPage() {
                     Choisissez votre forfait Libota
                   </h2>
                   <p className="text-brand-muted">
-                    Adresse vérifiée : {street}, N° {houseNo} — La fibre est disponible ! 🎉
+                    Adresse vérifiée : <span className="font-semibold text-brand-navy">{street}, N° {houseNo}</span>
+                    {currentZone && (
+                      <>
+                        {" — "}
+                        <span className={`font-semibold ${currentZone.status === "available" ? "text-green-600" : "text-orange-600"}`}>
+                          {currentZone.name} ({currentZone.status === "available" ? "Fibre disponible" : "Bientôt"})
+                        </span>
+                      </>
+                    )}
                   </p>
                 </div>
 
