@@ -54,10 +54,9 @@ export function SiteTypeModal() {
             <Image
               src="/img/colour_liquid_home2.png"
               alt="Liquid Home"
-              width={180}
-              height={56}
+              width={324}
+              height={100}
               className="h-14 w-auto"
-              style={{ width: "auto", height: "3.5rem" }}
             />
           </div>
           <h2 className="text-xl font-bold text-white">Bienvenue chez Liquid Home RDC</h2>

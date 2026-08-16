@@ -112,3 +112,36 @@ Unresolved / Future Work:
 - favicon.ico 404 (harmless — browser requests /favicon.ico by default, but we serve /favicon.png)
 - Customer portal (MyLiquid) full implementation with auth + dashboard
 - Complaint modal UI (API route exists, modal not yet built)
+
+---
+Task ID: 3 (cron review)
+Agent: main (automated web dev review)
+Task: 15-minute scheduled review of the Liquid Home RDC site
+
+Work Log:
+- Dev server had stopped; restarted with `node node_modules/.bin/next dev -p 3000`
+- Fixed recurring image aspect ratio warning in SiteTypeModal: changed Image props from width={180} height={56} + conflicting style to width={324} height={100} (actual intrinsic dimensions) + className="h-14 w-auto" only
+- Ran full verification of all 11 routes via agent-browser
+- Verified signup page Leaflet map, centered nav, console warnings, page errors, hydration
+
+Stage Summary:
+- All 11 pages load correctly with proper H1 headings:
+  - products-and-services → "Produits & Services"
+  - packages → "Libota"
+  - contact-us → "Contact"
+  - signup → "Forfaits internet"
+  - business → "Des solutions internet pensées pour votre entreprise"
+  - myliquid → "Espace Client MyLiquid"
+  - privacy-policy → "Politique de confidentialité"
+  - cookies-policy → "Politique des cookies"
+  - usage → "Utilisation acceptable"
+  - terms-and-conditions → "Termes et conditions"
+  - home → (hero carousel first, no visible H1 — matches original site design)
+- Signup map: OK (6 tiles + 12 coverage zones + 1 draggable marker)
+- Nav centered: offset=0px (perfectly centered)
+- Image aspect ratio warnings: 0 (FIXED)
+- Page errors: 0
+- Hydration errors: 0
+- Lint: clean
+
+No issues found. Site is fully operational.
