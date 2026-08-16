@@ -56,6 +56,7 @@ export function SiteTypeModal() {
               alt="Liquid Home"
               width={324}
               height={100}
+              loading="eager"
               className="h-14 w-auto"
             />
           </div>

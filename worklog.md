@@ -164,3 +164,26 @@ Stage Summary:
 - Hydration errors: 0
 
 No issues found. Site is fully operational.
+
+---
+Task ID: 5 (cron review)
+Agent: main (automated web dev review)
+Task: 15-minute scheduled review of the Liquid Home RDC site
+
+Work Log:
+- Dev server had stopped; restarted with `node node_modules/.bin/next dev -p 3000`
+- Fixed 2 LCP (Largest Contentful Paint) optimization warnings:
+  1. SiteTypeModal logo: added `loading="eager"` to the colour_liquid_home2.png Image
+  2. HeroCarousel banners: added `loading="eager"` to non-priority carousel banners (i > 0) since they rotate above the fold
+- Ran full verification of all 11 routes, signup map, centered nav, console warnings, page errors, hydration
+
+Stage Summary:
+- All 11 pages load correctly with proper H1 headings (home has hero carousel first as designed)
+- Signup Leaflet map: OK (6 tiles + 12 coverage zones + 1 draggable marker)
+- Nav centered: offset=0px (perfectly centered)
+- Console LCP warnings: 0 (FIXED)
+- Page errors: 0
+- Hydration errors: 0
+- Lint: clean
+
+No issues found. Site is fully operational.

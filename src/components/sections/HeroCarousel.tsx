@@ -36,6 +36,7 @@ export function HeroCarousel() {
               alt={b.alt}
               fill
               priority={i === 0}
+              loading={i === 0 ? undefined : "eager"}
               sizes="100vw"
               className="object-cover"
             />
