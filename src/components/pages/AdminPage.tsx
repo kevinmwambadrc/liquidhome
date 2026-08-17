@@ -49,6 +49,12 @@ import {
   AlignLeft,
   UserCheck,
   ChartPie,
+  Headphones,
+  Send,
+  Search,
+  MessageSquare,
+  LifeBuoy,
+  Sparkles,
   TrendingUp as TrendIcon,
 } from "lucide-react";
 import {
@@ -93,6 +99,8 @@ interface AdminMessage {
   areaOfInterest: string;
   requirements: string | null;
   handled: boolean;
+  adminReply?: string | null;
+  repliedAt?: string | null;
   createdAt: string;
 }
 
@@ -104,7 +112,30 @@ interface AdminComplaint {
   telephone: string;
   message: string;
   status: string;
+  adminReply?: string | null;
+  repliedAt?: string | null;
   createdAt: string;
+}
+
+interface AdminTicket {
+  id: string;
+  ref: string;
+  userId: string;
+  subject: string;
+  message: string;
+  status: string;
+  priority: string;
+  adminReply?: string | null;
+  repliedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  user?: {
+    id: string;
+    name: string | null;
+    email: string;
+    phone: string | null;
+    customerNo: string | null;
+  };
 }
 
 interface AdminSubscriber {
@@ -214,6 +245,7 @@ interface Overview {
   orders: AdminOrder[];
   messages: AdminMessage[];
   complaints: AdminComplaint[];
+  tickets?: AdminTicket[];
   subscribers: AdminSubscriber[];
   packages: AdminPackage[];
   equipments: AdminEquipment[];
@@ -279,6 +311,25 @@ export function AdminPage() {
 
   useEffect(() => {
     load();
+    const interval = setInterval(() => {
+      fetch("/api/admin/overview", { cache: "no-store" })
+        .then((r) => {
+          if (r.status === 403) {
+            setForbidden(true);
+            setData(null);
+          } else {
+            return r.json();
+          }
+        })
+        .then((json) => {
+          if (json && json.ok) {
+            setForbidden(false);
+            setData(json);
+          }
+        })
+        .catch(() => {});
+    }, 4000);
+    return () => clearInterval(interval);
   }, [load]);
 
   if (loading) {
@@ -427,6 +478,7 @@ const ADMIN_TABS = [
   { id: "overview", label: "Aperçu", icon: LayoutDashboard },
   { id: "orders", label: "Commandes", icon: Package },
   { id: "payments", label: "Paiements", icon: CreditCard },
+  { id: "tickets", label: "Tickets Support", icon: Headphones },
   { id: "pkgs", label: "Forfaits", icon: Wifi },
   { id: "equip", label: "Équipements", icon: RouterIcon },
   { id: "posts", label: "Infos & Tutos", icon: FileEdit },
@@ -467,12 +519,29 @@ function AdminDashboard({
                 <ShieldCheck className="h-6 w-6" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold">Back-office</h1>
-                <p className="text-white/70 text-sm">Pilotage Liquid Home RDC</p>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-2xl font-bold">Back-office</h1>
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-[11px] font-semibold">
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
+                    </span>
+                    Live Sync Direct
+                  </span>
+                </div>
+                <p className="text-white/70 text-sm">Pilotage Liquid Home RDC • Actualisation en temps réel</p>
               </div>
             </div>
           </div>
           <div className="flex items-center gap-3">
+            <button
+              onClick={() => onRefresh()}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-white/10 hover:bg-white/20 border border-white/20 text-xs font-semibold transition-colors"
+              title="Forcer l'actualisation immédiate"
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+              Actualiser
+            </button>
             <button
               onClick={() => navigate("/")}
               className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-white/10 hover:bg-white/20 border border-white/20 text-sm font-semibold transition-colors"
@@ -500,15 +569,17 @@ function AdminDashboard({
             const badge =
               t.id === "orders"
                 ? stats.ordersPending
-                : t.id === "messages"
-                  ? stats.messagesNew
-                  : t.id === "complaints"
-                    ? stats.complaintsOpen
-                    : t.id === "covreq"
-                      ? stats.coverageRequestsNew
-                      : t.id === "eqorders"
-                        ? stats.equipmentOrdersPending
-                        : 0;
+                : t.id === "tickets"
+                  ? stats.ticketsOpen
+                  : t.id === "messages"
+                    ? stats.messagesNew
+                    : t.id === "complaints"
+                      ? stats.complaintsOpen
+                      : t.id === "covreq"
+                        ? stats.coverageRequestsNew
+                        : t.id === "eqorders"
+                          ? stats.equipmentOrdersPending
+                          : 0;
             return (
               <button
                 key={t.id}
@@ -542,6 +613,7 @@ function AdminDashboard({
             {tab === "overview" && <OverviewTab data={data} />}
             {tab === "orders" && <OrdersTab orders={data?.orders ?? []} onRefresh={onRefresh} />}
             {tab === "payments" && <PaymentsTab transactions={data?.paymentTransactions ?? []} />}
+            {tab === "tickets" && <TicketsTab tickets={data?.tickets ?? []} onRefresh={onRefresh} />}
             {tab === "pkgs" && <PackagesTab packages={data?.packages ?? []} onRefresh={onRefresh} />}
             {tab === "equip" && <EquipmentsTab equipments={data?.equipments ?? []} onRefresh={onRefresh} />}
             {tab === "posts" && <PostsTab posts={data?.posts ?? []} onRefresh={onRefresh} />}
@@ -569,6 +641,7 @@ function OverviewTab({ data }: { data: Overview | null }) {
     { label: "Commandes", value: stats.ordersTotal, sub: `${stats.ordersPending} en attente`, icon: Package, accent: "from-brand-navy to-[#3550a5]" },
     { label: "Clients", value: stats.clients, sub: "comptes actifs", icon: Users, accent: "from-brand-orange to-brand-orange-hover" },
     { label: "Revenus encaissés", value: `${stats.revenuePaid} $`, sub: `${stats.revenuePending} $ en attente`, icon: DollarSign, accent: "from-green-500 to-emerald-600" },
+    { label: "Tickets Support", value: stats.tickets ?? 0, sub: `${stats.ticketsOpen ?? 0} ouverts`, icon: Headphones, accent: "from-blue-600 to-indigo-700" },
     { label: "Ventes équipements", value: `${stats.equipmentRevenue} $`, sub: `${stats.equipmentOrders} commandes`, icon: ShoppingCart, accent: "from-amber-500 to-orange-600" },
     { label: "Réclamations", value: stats.complaints, sub: `${stats.complaintsOpen} non résolues`, icon: MessageSquareWarning, accent: "from-red-500 to-rose-600" },
     { label: "Messages", value: stats.messages, sub: `${stats.messagesNew} nouveaux`, icon: Mail, accent: "from-violet-500 to-purple-600" },
@@ -793,9 +866,334 @@ function OrdersTab({ orders, onRefresh }: { orders: AdminOrder[]; onRefresh: () 
   );
 }
 
+/* ============ Tickets Support ============ */
+
+function TicketsTab({ tickets, onRefresh }: { tickets: AdminTicket[]; onRefresh: () => void }) {
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [priorityFilter, setPriorityFilter] = useState("all");
+  const [replyingId, setReplyingId] = useState<string | null>(null);
+  const [replyText, setReplyText] = useState("");
+  const [sending, setSending] = useState(false);
+  const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
+
+  const filtered = tickets.filter((t) => {
+    if (statusFilter !== "all" && t.status !== statusFilter) return false;
+    if (priorityFilter !== "all" && t.priority !== priorityFilter) return false;
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      const matchRef = t.ref.toLowerCase().includes(q);
+      const matchSubject = t.subject.toLowerCase().includes(q);
+      const matchMessage = t.message.toLowerCase().includes(q);
+      const matchName = (t.user?.name || "").toLowerCase().includes(q);
+      const matchEmail = (t.user?.email || "").toLowerCase().includes(q);
+      const matchCust = (t.user?.customerNo || "").toLowerCase().includes(q);
+      if (!matchRef && !matchSubject && !matchMessage && !matchName && !matchEmail && !matchCust) {
+        return false;
+      }
+    }
+    return true;
+  });
+
+  const handleStatusChange = async (id: string, newStatus: string) => {
+    setUpdatingStatus(id);
+    try {
+      await fetch("/api/admin/tickets", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, status: newStatus }),
+      });
+      onRefresh();
+    } finally {
+      setUpdatingStatus(null);
+    }
+  };
+
+  const handlePriorityChange = async (id: string, newPriority: string) => {
+    try {
+      await fetch("/api/admin/tickets", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, priority: newPriority }),
+      });
+      onRefresh();
+    } catch {}
+  };
+
+  const handleSendReply = async (id: string) => {
+    if (!replyText.trim()) return;
+    setSending(true);
+    try {
+      const res = await fetch("/api/admin/tickets", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, adminReply: replyText.trim(), status: "in-progress" }),
+      });
+      if (res.ok) {
+        setReplyingId(null);
+        setReplyText("");
+        onRefresh();
+      }
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Filter toolbar */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-col md:flex-row items-center justify-between gap-3">
+        <div className="relative w-full md:w-80">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-brand-muted" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Rechercher réf, client, sujet..."
+            className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-brand-orange/30"
+          />
+        </div>
+
+        <div className="flex items-center gap-2 flex-wrap w-full md:w-auto">
+          <span className="text-xs font-bold text-brand-navy">Statut :</span>
+          {["all", "open", "in-progress", "resolved"].map((s) => (
+            <button
+              key={s}
+              onClick={() => setStatusFilter(s)}
+              className={`text-xs px-3 py-1.5 rounded-lg font-semibold transition-colors ${
+                statusFilter === s
+                  ? "bg-brand-navy text-white"
+                  : "bg-gray-100 text-brand-muted hover:bg-gray-200"
+              }`}
+            >
+              {s === "all" ? "Tous" : s === "open" ? "Ouverts" : s === "in-progress" ? "En cours" : "Résolus"}
+            </button>
+          ))}
+
+          <span className="text-xs font-bold text-brand-navy ml-2">Urgence :</span>
+          {["all", "normal", "high", "urgent"].map((p) => (
+            <button
+              key={p}
+              onClick={() => setPriorityFilter(p)}
+              className={`text-xs px-2.5 py-1.5 rounded-lg font-semibold transition-colors ${
+                priorityFilter === p
+                  ? "bg-brand-orange text-white"
+                  : "bg-gray-100 text-brand-muted hover:bg-gray-200"
+              }`}
+            >
+              {p === "all" ? "Toutes" : p === "normal" ? "Normale" : p === "high" ? "Haute" : "Urgente"}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {filtered.length === 0 ? (
+        <EmptyState icon={Headphones} text="Aucun ticket support correspondant" />
+      ) : (
+        <div className="space-y-4">
+          {filtered.map((t, i) => (
+            <motion.div
+              key={t.id}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.04 }}
+              className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4"
+            >
+              {/* Header */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-gray-100">
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  <span className="px-2.5 py-1 rounded-lg bg-brand-navy text-white text-xs font-mono font-bold">
+                    {t.ref}
+                  </span>
+                  <h3 className="font-bold text-brand-navy text-base">{t.subject}</h3>
+                  {t.priority === "urgent" && (
+                    <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-[10px] font-bold uppercase tracking-wider">
+                      Urgente
+                    </span>
+                  )}
+                  {t.priority === "high" && (
+                    <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-bold uppercase tracking-wider">
+                      Haute
+                    </span>
+                  )}
+                  {t.priority === "normal" && (
+                    <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 text-[10px] font-bold uppercase tracking-wider">
+                      Normale
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2 flex-wrap">
+                  {/* Priority selector */}
+                  <select
+                    value={t.priority}
+                    onChange={(e) => handlePriorityChange(t.id, e.target.value)}
+                    className="text-xs rounded-lg border border-gray-200 bg-gray-50 px-2 py-1 font-medium text-brand-muted"
+                  >
+                    <option value="normal">Prio: Normale</option>
+                    <option value="high">Prio: Haute</option>
+                    <option value="urgent">Prio: Urgente</option>
+                  </select>
+
+                  {/* Status selector */}
+                  <select
+                    value={t.status}
+                    onChange={(e) => handleStatusChange(t.id, e.target.value)}
+                    disabled={updatingStatus === t.id}
+                    className={`rounded-lg border px-3 py-1.5 text-xs font-bold focus:outline-none cursor-pointer ${
+                      t.status === "resolved"
+                        ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                        : t.status === "in-progress"
+                          ? "border-blue-200 bg-blue-50 text-blue-700"
+                          : "border-amber-200 bg-amber-50 text-amber-800"
+                    }`}
+                  >
+                    <option value="open">Statut : Ouvert</option>
+                    <option value="in-progress">Statut : En cours</option>
+                    <option value="resolved">Statut : Résolu</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Client Info Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-brand-soft/50 rounded-xl p-3 text-xs text-brand-navy">
+                <div>
+                  <span className="text-brand-muted block text-[10px] uppercase font-bold">Client</span>
+                  <span className="font-semibold">{t.user?.name || "Client Liquid"}</span>
+                  {t.user?.customerNo && (
+                    <span className="ml-1.5 font-mono text-[11px] text-brand-orange font-bold">({t.user.customerNo})</span>
+                  )}
+                </div>
+                <div>
+                  <span className="text-brand-muted block text-[10px] uppercase font-bold">Contact</span>
+                  <a href={`mailto:${t.user?.email}`} className="text-brand-navy hover:text-brand-orange font-medium underline">
+                    {t.user?.email || "—"}
+                  </a>
+                  {t.user?.phone && (
+                    <span className="text-brand-muted block">{t.user.phone}</span>
+                  )}
+                </div>
+                <div>
+                  <span className="text-brand-muted block text-[10px] uppercase font-bold">Date d&apos;ouverture</span>
+                  <span>{new Date(t.createdAt).toLocaleString("fr-FR", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
+                </div>
+              </div>
+
+              {/* Client Message */}
+              <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 text-xs text-gray-800 leading-relaxed">
+                <span className="font-bold text-brand-navy block mb-1 text-[11px]">Message transmis par le client :</span>
+                <p className="whitespace-pre-wrap">{t.message}</p>
+              </div>
+
+              {/* Previous Admin Reply */}
+              {t.adminReply && (
+                <div className="bg-brand-soft/70 border-l-4 border-brand-orange rounded-r-xl p-4 text-xs text-brand-navy space-y-1">
+                  <div className="flex items-center justify-between font-bold text-brand-orange text-[11px]">
+                    <span className="flex items-center gap-1.5">
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                      Réponse officielle transmise au client
+                    </span>
+                    {t.repliedAt && (
+                      <span className="text-[10px] text-brand-muted font-normal">
+                        {new Date(t.repliedAt).toLocaleString("fr-FR")}
+                      </span>
+                    )}
+                  </div>
+                  <p className="whitespace-pre-wrap leading-relaxed text-brand-navy font-medium bg-white/80 p-3 rounded-lg border border-brand-orange/20">
+                    {t.adminReply}
+                  </p>
+                </div>
+              )}
+
+              {/* Reply Form */}
+              {replyingId === t.id ? (
+                <div className="bg-white border border-brand-orange/30 rounded-xl p-4 space-y-3 animate-in fade-in duration-200">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-brand-navy flex items-center gap-1.5">
+                      <Send className="h-3.5 w-3.5 text-brand-orange" />
+                      Rédiger une réponse officielle (envoyée par email et visible sur MyLiquid)
+                    </span>
+                    <button
+                      onClick={() => setReplyingId(null)}
+                      className="text-xs text-brand-muted hover:text-brand-navy"
+                    >
+                      Annuler
+                    </button>
+                  </div>
+
+                  {/* Quick snippets */}
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-[10px] text-brand-muted font-bold uppercase">Modèles rapides :</span>
+                    {[
+                      "Bonjour, notre équipe technique intervient sur votre ligne ce jour.",
+                      "Veuillez redémarrer votre routeur fibre pendant 30 secondes.",
+                      "L'incident réseau dans votre zone a été entièrement résolu.",
+                    ].map((snippet) => (
+                      <button
+                        key={snippet}
+                        type="button"
+                        onClick={() => setReplyText((prev) => (prev ? prev + " " + snippet : snippet))}
+                        className="text-[11px] px-2 py-1 bg-gray-100 hover:bg-gray-200 text-brand-navy rounded-md transition-colors"
+                      >
+                        {snippet.slice(0, 32)}...
+                      </button>
+                    ))}
+                  </div>
+
+                  <textarea
+                    value={replyText}
+                    onChange={(e) => setReplyText(e.target.value)}
+                    rows={3}
+                    placeholder="Saisissez la réponse technique pour le client..."
+                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-xs text-brand-navy focus:outline-none focus:ring-2 focus:ring-brand-orange/40 resize-y"
+                    autoFocus
+                  />
+
+                  <div className="flex justify-end gap-2">
+                    <button
+                      onClick={() => setReplyingId(null)}
+                      className="px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-semibold text-brand-muted hover:bg-gray-50"
+                    >
+                      Annuler
+                    </button>
+                    <button
+                      onClick={() => handleSendReply(t.id)}
+                      disabled={sending || !replyText.trim()}
+                      className="btn-brand text-xs px-4 py-2 flex items-center gap-1.5 disabled:opacity-50"
+                    >
+                      {sending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+                      Envoyer la réponse au client
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex justify-end">
+                  <button
+                    onClick={() => {
+                      setReplyingId(t.id);
+                      setReplyText(t.adminReply || "");
+                    }}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-brand-orange/10 hover:bg-brand-orange/20 text-brand-orange text-xs font-bold transition-colors"
+                  >
+                    <Send className="h-3.5 w-3.5" />
+                    {t.adminReply ? "Mettre à jour la réponse" : "Répondre au ticket"}
+                  </button>
+                </div>
+              )}
+            </motion.div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ============ Messages ============ */
 
 function MessagesTab({ messages, onRefresh }: { messages: AdminMessage[]; onRefresh: () => void }) {
+  const [replyingId, setReplyingId] = useState<string | null>(null);
+  const [replyText, setReplyText] = useState("");
+  const [sending, setSending] = useState(false);
+
   const toggle = async (id: string, handled: boolean) => {
     await fetch("/api/admin/messages", {
       method: "PATCH",
@@ -803,6 +1201,23 @@ function MessagesTab({ messages, onRefresh }: { messages: AdminMessage[]; onRefr
       body: JSON.stringify({ id, handled }),
     });
     onRefresh();
+  };
+
+  const sendReply = async (id: string) => {
+    if (!replyText.trim()) return;
+    setSending(true);
+    try {
+      await fetch("/api/admin/messages", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, adminReply: replyText.trim() }),
+      });
+      setReplyingId(null);
+      setReplyText("");
+      onRefresh();
+    } finally {
+      setSending(false);
+    }
   };
 
   if (messages.length === 0) {
@@ -817,12 +1232,14 @@ function MessagesTab({ messages, onRefresh }: { messages: AdminMessage[]; onRefr
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: i * 0.05 }}
-          className={`bg-white rounded-2xl border shadow-sm p-5 ${m.handled ? "opacity-60" : ""}`}
+          className={`bg-white rounded-2xl border shadow-sm p-5 space-y-3 ${m.handled ? "opacity-75" : ""}`}
         >
-          <div className="flex items-start justify-between gap-3 mb-2">
+          <div className="flex items-start justify-between gap-3">
             <div>
               <p className="font-bold text-brand-navy">{m.firstName} {m.lastName}</p>
-              <p className="text-xs text-brand-muted">{m.email} · {m.telephone}</p>
+              <p className="text-xs text-brand-muted">
+                <a href={`mailto:${m.email}`} className="hover:underline text-brand-orange">{m.email}</a> · {m.telephone}
+              </p>
             </div>
             <button
               onClick={() => toggle(m.id, !m.handled)}
@@ -830,17 +1247,73 @@ function MessagesTab({ messages, onRefresh }: { messages: AdminMessage[]; onRefr
                 m.handled ? "bg-gray-100 text-gray-600 hover:bg-gray-200" : "bg-brand-orange text-white hover:bg-brand-orange-hover"
               }`}
             >
-              {m.handled ? "Réouvrir" : "Marquer traité"}
+              {m.handled ? "Traité ✓" : "À traiter"}
             </button>
           </div>
+
           {m.requirements && (
-            <p className="text-sm text-brand-muted bg-brand-soft/60 rounded-lg p-3 mt-2">{m.requirements}</p>
+            <p className="text-xs text-brand-muted bg-brand-soft/60 rounded-xl p-3 leading-relaxed">{m.requirements}</p>
           )}
-          <div className="flex items-center gap-3 mt-3 text-xs text-brand-muted">
-            <span className="bg-brand-soft px-2 py-0.5 rounded-full">{m.areaOfInterest === "business" ? "Entreprise" : "Domicile"}</span>
-            {m.city && <span>{m.city}</span>}
-            <span className="ml-auto">{new Date(m.createdAt).toLocaleDateString("fr-FR")}</span>
+
+          {m.adminReply && (
+            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-xs text-emerald-800 space-y-1">
+              <span className="font-bold text-[10px] uppercase text-emerald-700 flex items-center gap-1">
+                <CheckCircle2 className="h-3 w-3" />
+                Réponse email transmise :
+              </span>
+              <p className="whitespace-pre-wrap">{m.adminReply}</p>
+            </div>
+          )}
+
+          <div className="flex items-center justify-between gap-3 text-xs text-brand-muted pt-1 border-t border-gray-100">
+            <span className="bg-brand-soft px-2.5 py-0.5 rounded-full text-[11px] font-semibold text-brand-navy">
+              {m.areaOfInterest === "business" ? "Entreprise" : "Domicile"}
+            </span>
+            <span>{new Date(m.createdAt).toLocaleDateString("fr-FR")}</span>
           </div>
+
+          {/* Reply Section */}
+          {replyingId === m.id ? (
+            <div className="bg-gray-50 rounded-xl p-3 space-y-2 border border-gray-200">
+              <textarea
+                value={replyText}
+                onChange={(e) => setReplyText(e.target.value)}
+                rows={2}
+                placeholder="Rédiger une réponse par email..."
+                className="w-full p-2 bg-white border border-gray-200 rounded-lg text-xs"
+                autoFocus
+              />
+              <div className="flex justify-end gap-2">
+                <button
+                  onClick={() => setReplyingId(null)}
+                  className="px-2.5 py-1 text-xs text-brand-muted rounded-md hover:bg-gray-200"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={() => sendReply(m.id)}
+                  disabled={sending || !replyText.trim()}
+                  className="btn-brand text-xs px-3 py-1 flex items-center gap-1"
+                >
+                  {sending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
+                  Envoyer par email
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex justify-end pt-1">
+              <button
+                onClick={() => {
+                  setReplyingId(m.id);
+                  setReplyText(m.adminReply || "");
+                }}
+                className="text-xs text-brand-orange hover:underline font-bold flex items-center gap-1"
+              >
+                <Send className="h-3 w-3" />
+                {m.adminReply ? "Modifier la réponse email" : "Répondre par email"}
+              </button>
+            </div>
+          )}
         </motion.div>
       ))}
     </div>
@@ -850,6 +1323,10 @@ function MessagesTab({ messages, onRefresh }: { messages: AdminMessage[]; onRefr
 /* ============ Complaints ============ */
 
 function ComplaintsTab({ complaints, onRefresh }: { complaints: AdminComplaint[]; onRefresh: () => void }) {
+  const [replyingId, setReplyingId] = useState<string | null>(null);
+  const [replyText, setReplyText] = useState("");
+  const [sending, setSending] = useState(false);
+
   const setStatus = async (id: string, status: string) => {
     await fetch("/api/admin/complaints", {
       method: "PATCH",
@@ -857,6 +1334,23 @@ function ComplaintsTab({ complaints, onRefresh }: { complaints: AdminComplaint[]
       body: JSON.stringify({ id, status }),
     });
     onRefresh();
+  };
+
+  const sendReply = async (id: string) => {
+    if (!replyText.trim()) return;
+    setSending(true);
+    try {
+      await fetch("/api/admin/complaints", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, adminReply: replyText.trim(), status: "in-progress" }),
+      });
+      setReplyingId(null);
+      setReplyText("");
+      onRefresh();
+    } finally {
+      setSending(false);
+    }
   };
 
   if (complaints.length === 0) {
@@ -871,11 +1365,11 @@ function ComplaintsTab({ complaints, onRefresh }: { complaints: AdminComplaint[]
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: i * 0.05 }}
-          className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5"
+          className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-3"
         >
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <p className="font-mono text-xs text-brand-muted">{c.ticket}</p>
+              <p className="font-mono text-xs font-bold text-brand-orange">{c.ticket}</p>
               <p className="font-bold text-brand-navy">{c.name}</p>
               <p className="text-xs text-brand-muted">{c.email} · {c.telephone}</p>
             </div>
@@ -884,22 +1378,76 @@ function ComplaintsTab({ complaints, onRefresh }: { complaints: AdminComplaint[]
               <span className="text-xs text-brand-muted">{new Date(c.createdAt).toLocaleString("fr-FR")}</span>
             </div>
           </div>
-          <p className="text-sm text-brand-muted bg-brand-soft/60 rounded-lg p-3 mt-3">{c.message}</p>
-          <div className="flex gap-2 mt-3">
-            {COMPLAINT_STATUSES.map((s) => (
-              <button
-                key={s.id}
-                onClick={() => setStatus(c.id, s.id)}
-                className={`text-xs px-3 py-1.5 rounded-full font-semibold transition-colors ${
-                  c.status === s.id
-                    ? "bg-brand-navy text-white"
-                    : "bg-brand-soft text-brand-muted hover:bg-gray-200"
-                }`}
-              >
-                {s.label}
-              </button>
-            ))}
+
+          <p className="text-xs text-brand-muted bg-brand-soft/60 rounded-xl p-3 leading-relaxed">{c.message}</p>
+
+          {c.adminReply && (
+            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-xs text-emerald-800 space-y-1">
+              <span className="font-bold text-[10px] uppercase text-emerald-700 flex items-center gap-1">
+                <CheckCircle2 className="h-3 w-3" />
+                Réponse transmise :
+              </span>
+              <p className="whitespace-pre-wrap">{c.adminReply}</p>
+            </div>
+          )}
+
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-gray-100">
+            <div className="flex gap-1.5">
+              {COMPLAINT_STATUSES.map((s) => (
+                <button
+                  key={s.id}
+                  onClick={() => setStatus(c.id, s.id)}
+                  className={`text-xs px-3 py-1 rounded-full font-semibold transition-colors ${
+                    c.status === s.id
+                      ? "bg-brand-navy text-white"
+                      : "bg-brand-soft text-brand-muted hover:bg-gray-200"
+                  }`}
+                >
+                  {s.label}
+                </button>
+              ))}
+            </div>
+
+            <button
+              onClick={() => {
+                setReplyingId(replyingId === c.id ? null : c.id);
+                setReplyText(c.adminReply || "");
+              }}
+              className="text-xs font-bold text-brand-orange hover:underline flex items-center gap-1"
+            >
+              <Send className="h-3 w-3" />
+              {c.adminReply ? "Mettre à jour la réponse" : "Répondre au client"}
+            </button>
           </div>
+
+          {replyingId === c.id && (
+            <div className="bg-gray-50 rounded-xl p-3 space-y-2 border border-gray-200 animate-in fade-in duration-150">
+              <textarea
+                value={replyText}
+                onChange={(e) => setReplyText(e.target.value)}
+                rows={2}
+                placeholder="Rédiger une réponse de résolution pour le client..."
+                className="w-full p-2 bg-white border border-gray-200 rounded-lg text-xs"
+                autoFocus
+              />
+              <div className="flex justify-end gap-2">
+                <button
+                  onClick={() => setReplyingId(null)}
+                  className="px-2.5 py-1 text-xs text-brand-muted rounded-md hover:bg-gray-200"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={() => sendReply(c.id)}
+                  disabled={sending || !replyText.trim()}
+                  className="btn-brand text-xs px-3 py-1 flex items-center gap-1"
+                >
+                  {sending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
+                  Envoyer la réponse
+                </button>
+              </div>
+            </div>
+          )}
         </motion.div>
       ))}
     </div>

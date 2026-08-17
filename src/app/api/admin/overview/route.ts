@@ -8,7 +8,7 @@ export async function GET() {
     return NextResponse.json({ ok: false, message: "Accès refusé." }, { status: 403 });
   }
 
-  const [orders, messages, complaints, subscribers, users, invoices, packages, equipments, posts, coverageRequests, equipmentOrders, emails, kycUsers, paymentTransactions] = await Promise.all([
+  const [orders, messages, complaints, subscribers, users, invoices, packages, equipments, posts, coverageRequests, equipmentOrders, emails, kycUsers, paymentTransactions, tickets] = await Promise.all([
     db.order.findMany({ orderBy: { createdAt: "desc" }, include: { user: { select: { customerNo: true } } } }),
     db.contactMessage.findMany({ orderBy: { createdAt: "desc" } }),
     db.complaint.findMany({ orderBy: { createdAt: "desc" } }),
@@ -30,6 +30,14 @@ export async function GET() {
       },
     }),
     db.paymentTransaction.findMany({ orderBy: { createdAt: "desc" }, take: 100 }),
+    db.ticket.findMany({
+      orderBy: { createdAt: "desc" },
+      include: {
+        user: {
+          select: { id: true, name: true, email: true, phone: true, customerNo: true },
+        },
+      },
+    }),
   ]);
 
   const revenuePaid = invoices
@@ -96,6 +104,8 @@ export async function GET() {
       messagesNew: messages.filter((m) => !m.handled).length,
       complaints: complaints.length,
       complaintsOpen: complaints.filter((c) => c.status !== "resolved").length,
+      tickets: tickets.length,
+      ticketsOpen: tickets.filter((t) => t.status !== "resolved").length,
       subscribers: subscribers.length,
       revenuePaid,
       revenuePending,
@@ -109,6 +119,7 @@ export async function GET() {
     orders,
     messages,
     complaints,
+    tickets,
     subscribers,
     invoices,
     packages: packages.map((p) => ({ ...p, features: JSON.parse(p.features) })),

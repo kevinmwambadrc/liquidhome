@@ -64,16 +64,18 @@ model Order {
 }
 
 model ContactMessage {
-  id             String   @id @default(cuid())
+  id             String    @id @default(cuid())
   firstName      String
   lastName       String
   email          String
   telephone      String
   city           String?
-  areaOfInterest String   @default("home")
+  areaOfInterest String    @default("home")
   requirements   String?
-  handled        Boolean  @default(false)
-  createdAt      DateTime @default(now())
+  handled        Boolean   @default(false)
+  adminReply     String?
+  repliedAt      DateTime?
+  createdAt      DateTime  @default(now())
 }
 
 model NewsletterSubscriber {
@@ -84,16 +86,18 @@ model NewsletterSubscriber {
 }
 
 model Complaint {
-  id        String   @id @default(cuid())
-  ticket    String   @unique
-  userId    String?
-  name      String
-  email     String
-  telephone String
-  message   String
-  status    String   @default("open") // open | in-progress | resolved
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String    @id @default(cuid())
+  ticket     String    @unique
+  userId     String?
+  name       String
+  email      String
+  telephone  String
+  message    String
+  status     String    @default("open") // open | in-progress | resolved
+  adminReply String?
+  repliedAt  DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 }
 
 model Invoice {
@@ -114,15 +118,18 @@ model Invoice {
 }
 
 model Ticket {
-  id        String   @id @default(cuid())
-  ref       String   @unique
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  subject   String
-  message   String
-  status    String   @default("open") // open | in-progress | resolved
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String    @id @default(cuid())
+  ref        String    @unique
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject    String
+  message    String
+  status     String    @default("open") // open | in-progress | resolved
+  priority   String    @default("normal") // normal | high | urgent
+  adminReply String?
+  repliedAt  DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 }
 
 model Package {

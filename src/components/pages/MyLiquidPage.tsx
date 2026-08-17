@@ -97,6 +97,9 @@ interface MyTicket {
   subject: string;
   message: string;
   status: string;
+  priority?: string;
+  adminReply?: string | null;
+  repliedAt?: string | null;
   createdAt: string;
 }
 
@@ -191,6 +194,19 @@ export function MyLiquidPage() {
 
   useEffect(() => {
     refresh();
+    const interval = setInterval(() => {
+      fetch("/api/auth/me", { cache: "no-store" })
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.user) {
+            setOrders(data.orders ?? []);
+            setInvoices(data.invoices ?? []);
+            setTickets(data.tickets ?? []);
+          }
+        })
+        .catch(() => {});
+    }, 4000);
+    return () => clearInterval(interval);
   }, [refresh]);
 
   const onLogout = async () => {
@@ -1264,6 +1280,7 @@ function SupportTab({ tickets, onChanged }: { tickets: MyTicket[]; onChanged: ()
   const { navigate } = useRouter();
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
+  const [priority, setPriority] = useState("normal");
   const [sending, setSending] = useState(false);
   const [feedback, setFeedback] = useState("");
 
@@ -1275,13 +1292,14 @@ function SupportTab({ tickets, onChanged }: { tickets: MyTicket[]; onChanged: ()
       const res = await fetch("/api/tickets", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ subject, message }),
+        body: JSON.stringify({ subject, message, priority }),
       });
       const data = await res.json();
       setFeedback(data.message ?? "");
       if (data.ok) {
         setSubject("");
         setMessage("");
+        setPriority("normal");
         onChanged();
       }
     } finally {
@@ -1292,29 +1310,47 @@ function SupportTab({ tickets, onChanged }: { tickets: MyTicket[]; onChanged: ()
   return (
     <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-        <h3 className="font-bold text-brand-navy mb-1">Ouvrir un ticket support</h3>
+        <div className="flex items-center justify-between mb-1">
+          <h3 className="font-bold text-brand-navy">Ouvrir un ticket support</h3>
+          <span className="flex items-center gap-1 text-[11px] text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full font-semibold">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            Support en direct
+          </span>
+        </div>
         <p className="text-sm text-brand-muted mb-5">
-          Notre équipe technique vous répond sous 24h. Pour les urgences, appelez le {CONTACT_INFO.shortPhone}.
+          Notre équipe technique vous répond dans les plus brefs délais. Pour les urgences, appelez le {CONTACT_INFO.shortPhone}.
         </p>
         <form onSubmit={submit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-brand-navy mb-2">Objet</label>
+            <label className="block text-sm font-medium text-brand-navy mb-2">Objet du problème</label>
             <input
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
               required
-              placeholder="Ex: Connexion instable"
+              placeholder="Ex: Connexion fibre instable ou perte de signal"
               className="input-brand"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-brand-navy mb-2">Message</label>
+            <label className="block text-sm font-medium text-brand-navy mb-2">Degré d&apos;urgence</label>
+            <select
+              value={priority}
+              onChange={(e) => setPriority(e.target.value)}
+              className="input-brand"
+            >
+              <option value="normal">Normal (Assistance standard sous 24h)</option>
+              <option value="high">Haute (Perturbation majeure)</option>
+              <option value="urgent">Urgente (Coupure totale fibre)</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-brand-navy mb-2">Description détaillée</label>
             <textarea
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               required
-              rows={5}
-              placeholder="Décrivez votre problème..."
+              rows={4}
+              placeholder="Expliquez ce que vous observez (ex: voyant LOS rouge sur la box, panne depuis ce matin...)"
               className="input-brand resize-y"
             />
           </div>
@@ -1322,12 +1358,12 @@ function SupportTab({ tickets, onChanged }: { tickets: MyTicket[]; onChanged: ()
             {sending ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Envoi...
+                Envoi en cours...
               </>
             ) : (
               <>
                 <Send className="h-4 w-4" />
-                Envoyer le ticket
+                Envoyer le ticket au support
               </>
             )}
           </button>
@@ -1341,12 +1377,15 @@ function SupportTab({ tickets, onChanged }: { tickets: MyTicket[]; onChanged: ()
       </div>
 
       <div className="space-y-3">
-        <h3 className="font-bold text-brand-navy">Mes tickets ({tickets.length})</h3>
+        <div className="flex items-center justify-between">
+          <h3 className="font-bold text-brand-navy">Mes tickets ({tickets.length})</h3>
+          <span className="text-xs text-brand-muted">Mise à jour en temps réel</span>
+        </div>
         {tickets.length === 0 && (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 text-center text-sm text-brand-muted">
-            Aucun ticket. Besoin d&apos;aide ?{" "}
-            <button onClick={() => navigate("/contact")} className="text-brand-orange font-semibold hover:underline">
-              Contactez-nous
+            Aucun ticket ouvert actuellement. Tout fonctionne ! 🎉 Besoin d&apos;aide ?{" "}
+            <button onClick={() => navigate("/contact")} className="text-brand-orange font-semibold hover:underline block mt-2">
+              Contactez le support
             </button>
           </div>
         )}
@@ -1356,16 +1395,52 @@ function SupportTab({ tickets, onChanged }: { tickets: MyTicket[]; onChanged: ()
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.06 }}
-            className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5"
+            className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-3"
           >
-            <div className="flex items-start justify-between gap-3 mb-2">
+            <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="font-semibold text-brand-navy truncate">{t.subject}</p>
-                <p className="text-xs text-brand-muted font-mono">{t.ref} · {new Date(t.createdAt).toLocaleDateString("fr-FR")}</p>
+                <div className="flex items-center gap-2 flex-wrap mb-1">
+                  <p className="font-bold text-brand-navy truncate">{t.subject}</p>
+                  {t.priority === "urgent" && (
+                    <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-[10px] font-bold uppercase">
+                      Urgent
+                    </span>
+                  )}
+                  {t.priority === "high" && (
+                    <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-bold uppercase">
+                      Prioritaire
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-brand-muted font-mono">{t.ref} · {new Date(t.createdAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}</p>
               </div>
               <StatusChip status={t.status} />
             </div>
-            <p className="text-sm text-brand-muted line-clamp-2">{t.message}</p>
+
+            <div className="bg-gray-50 rounded-xl p-3 text-xs text-gray-700 leading-relaxed border border-gray-100">
+              <span className="font-semibold text-brand-navy block mb-0.5">Votre message :</span>
+              {t.message}
+            </div>
+
+            {/* Official Support Response */}
+            {t.adminReply && (
+              <div className="bg-brand-soft/80 border-l-4 border-brand-orange rounded-r-xl p-3.5 text-xs text-brand-navy animate-in fade-in duration-300">
+                <div className="flex items-center justify-between mb-1.5 font-bold text-brand-navy flex-wrap gap-1">
+                  <span className="flex items-center gap-1.5 text-brand-orange">
+                    <Headphones className="h-3.5 w-3.5" />
+                    Réponse de l&apos;équipe technique Liquid Home
+                  </span>
+                  {t.repliedAt && (
+                    <span className="text-[10px] text-brand-muted font-normal">
+                      {new Date(t.repliedAt).toLocaleString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                    </span>
+                  )}
+                </div>
+                <p className="whitespace-pre-wrap leading-relaxed text-brand-navy font-medium bg-white/60 p-2.5 rounded-lg border border-brand-orange/20">
+                  {t.adminReply}
+                </p>
+              </div>
+            )}
           </motion.div>
         ))}
       </div>

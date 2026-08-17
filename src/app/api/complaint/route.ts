@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
     const user = await getCurrentUser();
     const ticket = refCode("TKT");
 
-    await db.complaint.create({
+    const created = await db.complaint.create({
       data: {
         ticket,
         userId: user?.id ?? null,
@@ -33,6 +33,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       ok: true,
+      id: created.id,
       ticket,
       message: `Votre plainte a été enregistrée sous le ticket ${ticket}. Notre équipe de résolution vous contactera au ${telephone} sous 48h.`,
     });
