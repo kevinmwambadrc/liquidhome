@@ -6,6 +6,7 @@ import { useRouter } from "@/lib/router";
 import { initiateMaishaPayCheckout } from "@/lib/maishapay-client";
 import { PACKAGES, CONTACT_INFO } from "@/lib/content";
 import { PageBanner } from "@/components/sections/PageBanner";
+import { runSpeedTest, SpeedTestProgress, SpeedTestFinalResult } from "@/lib/speedtest";
 import {
   User,
   Lock,
@@ -35,6 +36,12 @@ import {
   ShieldCheck,
   Wallet,
   ShoppingCart,
+  Activity,
+  ArrowDown,
+  ArrowUp,
+  Play,
+  RotateCcw,
+  Sparkles,
 } from "lucide-react";
 import {
   AreaChart,
@@ -553,6 +560,7 @@ function AdminRedirect({ onLogout }: { onLogout: () => void }) {
 
 const TABS = [
   { id: "overview", label: "Aperçu", icon: Gauge },
+  { id: "speedtest", label: "Test de Débit", icon: Activity },
   { id: "orders", label: "Mes commandes", icon: Package },
   { id: "purchases", label: "Mes achats", icon: ShoppingCart },
   { id: "invoices", label: "Factures", icon: Receipt },
@@ -724,6 +732,7 @@ function ClientDashboard({
                     tickets={tickets}
                   />
                 )}
+                {tab === "speedtest" && <ClientSpeedTestTab activeOrder={activeOrder} />}
                 {tab === "orders" && <OrdersTab orders={orders} />}
                 {tab === "purchases" && <PurchasesTab orders={equipmentOrders} />}
                 {tab === "invoices" && <InvoicesTab invoices={invoices} onChanged={onChanged} />}
@@ -1513,6 +1522,207 @@ function ProfileTab({ me, onChanged }: { me: MeUser; onChanged: () => void }) {
           </p>
         )}
       </form>
+    </div>
+  );
+}
+
+/* ============ Client Speed Test ============ */
+
+function ClientSpeedTestTab({ activeOrder }: { activeOrder?: MyOrder }) {
+  const { navigate } = useRouter();
+  const [running, setRunning] = useState(false);
+  const [progress, setProgress] = useState<SpeedTestProgress>({
+    phase: "idle",
+    pingMs: 0,
+    jitterMs: 0,
+    downloadMbps: 0,
+    uploadMbps: 0,
+    progressPercent: 0,
+    downloadGraph: [],
+    uploadGraph: [],
+    currentSpeed: 0,
+    server: "Liquid Home Kinshasa Core",
+    clientIp: "197.234.218.42",
+    isp: "Liquid Intelligent Technologies RDC",
+  });
+  const [result, setResult] = useState<SpeedTestFinalResult | null>(null);
+
+  const startTest = async () => {
+    setRunning(true);
+    setResult(null);
+    try {
+      const res = await runSpeedTest("/api/speedtest", (p) => setProgress(p));
+      setResult(res);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setRunning(false);
+    }
+  };
+
+  const activePkg = activeOrder
+    ? PACKAGES.find((p) => p.id === activeOrder.packageId)
+    : null;
+
+  return (
+    <div className="space-y-6">
+      {/* Overview header */}
+      <div className="bg-gradient-to-r from-brand-navy via-[#102a6b] to-brand-navy rounded-2xl p-6 text-white shadow-md relative overflow-hidden">
+        <div className="absolute right-0 top-0 w-64 h-64 bg-brand-orange/20 rounded-full blur-3xl pointer-events-none" />
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-1.5">
+              <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[11px] font-bold uppercase tracking-wider border border-emerald-400/30 flex items-center gap-1">
+                <Activity className="h-3.5 w-3.5" />
+                Testeur de Ligne Fibre Dédié
+              </span>
+              {activePkg && (
+                <span className="text-xs text-white/70">
+                  Forfait actif : <strong>{activePkg.name} ({activePkg.speed})</strong>
+                </span>
+              )}
+            </div>
+            <h3 className="text-xl sm:text-2xl font-bold text-white">
+              Vérifiez la qualité &amp; le débit de votre raccordement
+            </h3>
+            <p className="text-white/70 text-xs sm:text-sm mt-1 max-w-xl">
+              Mesure directe sur le réseau local Liquid Home Kinshasa. Évaluez la vitesse de téléchargement, d&apos;envoi, la latence et la stabilité (gigue).
+            </p>
+          </div>
+          <button
+            onClick={() => navigate("/speedtest")}
+            className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-xs font-bold transition-colors whitespace-nowrap"
+          >
+            Plein écran / Page dédiée
+            <ArrowRight className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </div>
+
+      {/* Main Gauge & Controls Card */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 sm:p-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+          {/* Dial View */}
+          <div className="flex flex-col items-center justify-center relative py-4">
+            <div className="relative w-56 h-56 flex items-center justify-center">
+              <svg className="w-full h-full transform -rotate-90" viewBox="0 0 200 200">
+                <circle
+                  cx="100"
+                  cy="100"
+                  r="80"
+                  stroke="#e2e8f0"
+                  strokeWidth="10"
+                  fill="none"
+                  strokeDasharray="377"
+                  strokeDashoffset="126"
+                  strokeLinecap="round"
+                />
+                <circle
+                  cx="100"
+                  cy="100"
+                  r="80"
+                  stroke="#f89e3d"
+                  strokeWidth="11"
+                  fill="none"
+                  strokeDasharray="377"
+                  strokeDashoffset={377 - (progress.progressPercent / 100) * 251}
+                  strokeLinecap="round"
+                />
+              </svg>
+
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+                {!running && progress.phase === "idle" && (
+                  <button
+                    onClick={startTest}
+                    className="w-28 h-28 rounded-full bg-brand-orange hover:bg-brand-orange-hover text-white font-black text-xs flex flex-col items-center justify-center shadow-lg shadow-brand-orange/40 transition-transform hover:scale-105"
+                  >
+                    <Play className="h-6 w-6 mb-1 fill-white ml-0.5" />
+                    TESTER
+                  </button>
+                )}
+
+                {running && (
+                  <div>
+                    <span className="text-[10px] uppercase text-brand-muted font-bold block mb-0.5">
+                      {progress.phase === "ping" ? "Ping" : progress.phase === "download" ? "Download" : "Upload"}
+                    </span>
+                    <div className="text-3xl font-black font-mono text-brand-navy">
+                      {progress.currentSpeed.toFixed(1)}
+                    </div>
+                    <span className="text-[11px] font-bold text-brand-orange">Mbps</span>
+                  </div>
+                )}
+
+                {!running && progress.phase === "finished" && (
+                  <div>
+                    <span className="text-[9px] uppercase text-emerald-600 font-bold block">RÉSULTAT</span>
+                    <div className="text-3xl font-black font-mono text-brand-navy">
+                      {result?.downloadMbps ?? progress.downloadMbps}
+                    </div>
+                    <span className="text-[10px] font-bold text-brand-muted">Mbps Download</span>
+                    <button
+                      onClick={startTest}
+                      className="mt-2 text-[11px] font-bold text-brand-orange hover:underline flex items-center gap-1 mx-auto"
+                    >
+                      <RotateCcw className="h-3 w-3" />
+                      Refaire
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Dials / Metrics */}
+          <div className="md:col-span-2 space-y-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <div className="bg-brand-soft/60 rounded-xl p-3.5 border border-gray-100">
+                <span className="text-xs text-brand-muted block font-medium">Ping / Latence</span>
+                <span className="text-xl font-bold font-mono text-brand-navy">
+                  {progress.pingMs > 0 ? `${progress.pingMs} ms` : "—"}
+                </span>
+                {progress.jitterMs > 0 && (
+                  <span className="text-[10px] text-brand-muted block">Gigue: {progress.jitterMs} ms</span>
+                )}
+              </div>
+
+              <div className="bg-brand-soft/60 rounded-xl p-3.5 border border-gray-100">
+                <span className="text-xs text-brand-muted block font-medium">Téléchargement</span>
+                <span className="text-xl font-bold font-mono text-brand-orange">
+                  {progress.downloadMbps > 0 ? `${progress.downloadMbps} Mbps` : "—"}
+                </span>
+                <span className="text-[10px] text-brand-muted block">Débit descendant</span>
+              </div>
+
+              <div className="bg-brand-soft/60 rounded-xl p-3.5 border border-gray-100 col-span-2 sm:col-span-1">
+                <span className="text-xs text-brand-muted block font-medium">Envoi (Upload)</span>
+                <span className="text-xl font-bold font-mono text-emerald-600">
+                  {progress.uploadMbps > 0 ? `${progress.uploadMbps} Mbps` : "—"}
+                </span>
+                <span className="text-[10px] text-brand-muted block">Débit montant</span>
+              </div>
+            </div>
+
+            {/* Assessment */}
+            {result && (
+              <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 text-xs text-emerald-900 space-y-1 animate-in fade-in">
+                <div className="flex items-center gap-2 font-bold text-emerald-800">
+                  <CheckCircle2 className="h-4 w-4" />
+                  <span>Diagnostic de ligne : {result.ratingLabel}</span>
+                </div>
+                <p className="text-emerald-800/80 leading-relaxed">
+                  Votre connexion fibre est parfaitement stable. Streaming 4K, visioconférence et jeux en ligne fonctionnent de manière optimale.
+                </p>
+              </div>
+            )}
+
+            <div className="flex items-center justify-between text-xs text-brand-muted pt-2 border-t border-gray-100">
+              <span>Serveur : <strong className="text-brand-navy">{progress.server}</strong></span>
+              <span>Fournisseur : <strong className="text-brand-navy">{progress.isp}</strong></span>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

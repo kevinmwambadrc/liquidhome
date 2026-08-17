@@ -48,6 +48,15 @@ export function SiteFooter() {
             ))}
             <li>
               <button
+                onClick={() => navigate("/speedtest")}
+                className="text-brand-orange font-semibold hover:underline transition-colors text-left flex items-center gap-1.5"
+              >
+                <span>⚡</span>
+                Test de Débit (Speed Test)
+              </button>
+            </li>
+            <li>
+              <button
                 onClick={() => navigate("/packages")}
                 className="text-white/80 hover:text-brand-orange transition-colors text-left"
               >

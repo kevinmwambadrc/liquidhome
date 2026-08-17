@@ -12,6 +12,7 @@ export const PATHS = {
   businessProductsAndServices: "/business/produits-et-services",
   packages: "/packages",
   contact: "/contact",
+  speedtest: "/speedtest",
   signup: "/souscrire",
   myliquid: "/myliquid",
   admin: "/admin",

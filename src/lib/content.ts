@@ -27,10 +27,12 @@ import {
 export const NAV_ITEMS = [
   { label: "Domicile", labelEn: "Home", route: "/" as const, icon: Home, audience: "home" as const },
   { label: "Produits & Services", labelEn: "Products & Services", route: "/produits-et-services" as const, icon: Package, audience: "home" as const },
+  { label: "Speed Test", labelEn: "Speed Test", route: "/speedtest" as const, icon: Gauge, audience: "home" as const },
   { label: "Infos", labelEn: "News", route: "/infos" as const, icon: Newspaper, audience: "home" as const },
   { label: "Contact", labelEn: "Contact", route: "/contact" as const, icon: Phone, audience: "home" as const },
   { label: "Accueil PME", labelEn: "SME Home", route: "/business#home" as const, icon: Building2, audience: "business" as const },
   { label: "Produits & Services", labelEn: "Products & Services", route: "/business/produits-et-services" as const, icon: Package, audience: "business" as const },
+  { label: "Speed Test", labelEn: "Speed Test", route: "/speedtest" as const, icon: Gauge, audience: "business" as const },
   { label: "Infos", labelEn: "News", route: "/infos" as const, icon: Newspaper, audience: "business" as const },
   { label: "Contact", labelEn: "Contact", route: "/contact" as const, icon: Phone, audience: "business" as const },
 ];

@@ -29,6 +29,7 @@ model User {
   invoices          Invoice[]
   tickets           Ticket[]
   equipmentOrders   EquipmentOrder[]
+  speedTests        SpeedTestResult[]
 }
 
 model Session {
@@ -260,4 +261,22 @@ model TrackingEvent {
 
   @@index([sid, createdAt])
   @@index([kind, createdAt])
+}
+
+model SpeedTestResult {
+  id           String   @id @default(cuid())
+  userId       String?
+  user         User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  ping         Float    // ms
+  jitter       Float    // ms
+  downloadMbps Float    // Mbps
+  uploadMbps   Float    // Mbps
+  server       String   // server name / id
+  clientIp     String?
+  isp          String?
+  rating       String?  // excellent | good | average
+  createdAt    DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([createdAt])
 }
