@@ -8,6 +8,8 @@ import { AvailabilityChecker } from "@/components/layout/AvailabilityChecker";
 import { SiteTypeModal } from "@/components/widgets/SiteTypeModal";
 import { CookieConsent, getConsent, track } from "@/components/widgets/CookieConsent";
 
+import { AccessGate } from "@/components/widgets/AccessGate";
+
 export function SiteShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   // The availability checker is irrelevant inside the portals
@@ -40,13 +42,15 @@ export function SiteShell({ children }: { children: ReactNode }) {
   }, [pathname]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-white">
-      <SiteHeader />
-      {!isPortal && <AvailabilityChecker />}
-      <main className="flex-1">{children}</main>
-      <SiteFooter />
-      <SiteTypeModal />
-      <CookieConsent />
-    </div>
+    <AccessGate>
+      <div className="min-h-screen flex flex-col bg-white">
+        <SiteHeader />
+        {!isPortal && <AvailabilityChecker />}
+        <main className="flex-1">{children}</main>
+        <SiteFooter />
+        <SiteTypeModal />
+        <CookieConsent />
+      </div>
+    </AccessGate>
   );
 }

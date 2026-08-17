@@ -28,7 +28,7 @@ const BUSINESS_SERVICES = [
       "Adresses IP fixes disponibles",
       "Installation coordonnée avec vos équipes",
     ],
-    cta: "Demander un devis",
+    cta: "Nous contacter",
   },
   {
     icon: Network,
@@ -41,7 +41,7 @@ const BUSINESS_SERVICES = [
       "VLAN et segmentation réseau",
       "Supervision proactive 24/7",
     ],
-    cta: "Demander un devis",
+    cta: "Nous contacter",
   },
   {
     icon: RouterIcon,
@@ -54,7 +54,7 @@ const BUSINESS_SERVICES = [
       "Configuration et maintenance incluses",
       "Remplacement matériel sous 24h",
     ],
-    cta: "Demander un devis",
+    cta: "Nous contacter",
   },
   {
     icon: Phone,
@@ -67,7 +67,7 @@ const BUSINESS_SERVICES = [
       "Conférences et files d'attente",
       "Bientôt disponible — nous consulter",
     ],
-    cta: "Nous consulter",
+    cta: "Nous contacter",
     comingSoon: true,
   },
   {
@@ -81,7 +81,7 @@ const BUSINESS_SERVICES = [
       "Rapports de disponibilité mensuels",
       "Secours LTE automatique en option",
     ],
-    cta: "Demander un devis",
+    cta: "Nous contacter",
   },
   {
     icon: Headphones,
@@ -112,7 +112,7 @@ export function BusinessProductsServicesPage() {
             onClick={() => navigate("/contact")}
             className="btn-brand inline-flex"
           >
-            Demander un devis
+            Nous contacter
             <ArrowRight className="h-4 w-4" />
           </button>
           <button

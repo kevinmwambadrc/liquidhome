@@ -134,7 +134,7 @@ export function BusinessPage() {
               Prêt à passer à la fibre pour votre entreprise ?
             </h2>
             <p className="text-white/90">
-              Contactez notre équipe commerciale pour un devis sur-mesure.
+              Contactez notre équipe commerciale pour une solution sur-mesure.
             </p>
           </div>
           <div className="flex flex-col sm:flex-row gap-3">
@@ -142,7 +142,7 @@ export function BusinessPage() {
               onClick={() => navigate("/contact")}
               className="bg-white text-brand-navy font-bold uppercase px-6 py-3 rounded-md hover:bg-gray-100 transition-colors flex items-center gap-2"
             >
-              Demander un devis
+              Nous contacter
               <ArrowRight className="h-4 w-4" />
             </button>
             <button

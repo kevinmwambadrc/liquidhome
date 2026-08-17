@@ -32,7 +32,7 @@ export const NAV_ITEMS = [
   { label: "Accueil PME", labelEn: "SME Home", route: "/business#home" as const, icon: Building2, audience: "business" as const },
   { label: "Produits & Services", labelEn: "Products & Services", route: "/business/produits-et-services" as const, icon: Package, audience: "business" as const },
   { label: "Infos", labelEn: "News", route: "/infos" as const, icon: Newspaper, audience: "business" as const },
-  { label: "Devis", labelEn: "Quote", route: "/contact" as const, icon: Phone, audience: "business" as const },
+  { label: "Contact", labelEn: "Contact", route: "/contact" as const, icon: Phone, audience: "business" as const },
 ];
 
 export function navItemsFor(siteType: "home" | "business") {
