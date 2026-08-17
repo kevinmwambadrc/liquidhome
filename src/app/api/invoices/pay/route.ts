@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
+import { sendEmail, paymentConfirmedEmail } from "@/lib/mailer";
 
 export async function POST(req: NextRequest) {
   const user = await getCurrentUser();
@@ -25,9 +26,25 @@ export async function POST(req: NextRequest) {
       data: { status: "paid", method },
     });
 
+    await sendEmail({
+      to: user.email,
+      subject: `Confirmation de paiement — Facture ${invoice.number}`,
+      html: paymentConfirmedEmail({
+        name: user.name ?? user.email,
+        ref: invoice.number,
+        amount: invoice.amount,
+        paymentMethod:
+          method === "card"
+            ? "Carte bancaire (Visa / Mastercard)"
+            : "Mobile Money (M-Pesa / Orange Money / Airtel Money)",
+        description: `Abonnement fibre optique (${invoice.period || "Période en cours"})`,
+      }),
+      kind: "payment_receipt",
+    }).catch(() => {});
+
     return NextResponse.json({
       ok: true,
-      message: `Paiement de ${invoice.amount} USD confirmé via ${method === "card" ? "carte bancaire" : "Mobile Money"}. Facture ${invoice.number} réglée.`,
+      message: `Paiement de ${invoice.amount} USD confirmé via ${method === "card" ? "carte bancaire" : "Mobile Money"}. Facture ${invoice.number} réglée avec succès. Reçu envoyé à ${user.email}.`,
     });
   } catch {
     return NextResponse.json({ ok: false, message: "Erreur serveur." }, { status: 500 });

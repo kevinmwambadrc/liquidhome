@@ -280,3 +280,23 @@ model SpeedTestResult {
   @@index([userId, createdAt])
   @@index([createdAt])
 }
+
+model CookieConsent {
+  id           String   @id @default(cuid())
+  ip           String
+  userAgent    String?
+  city         String?
+  country      String?  @default("CD")
+  isp          String?
+  necessary    Boolean  @default(true)  // Urgents & Essentiels (Obligatoires)
+  functional   Boolean  @default(false) // Utiles & Fonctionnels (Langue, GPS, SpeedTest)
+  analytics    Boolean  @default(false) // Performance & Analytique (Vitesse fibre, CWV)
+  marketing    Boolean  @default(false) // Offres adaptées & Communications
+  source       String?  @default("banner") // banner | modal | page
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([ip, createdAt])
+  @@index([createdAt])
+}
+

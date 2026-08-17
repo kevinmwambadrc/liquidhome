@@ -10,10 +10,11 @@ export async function GET(req: NextRequest) {
   const since = new Date();
   since.setDate(since.getDate() - days);
 
-  const [events, consents, sessions] = await Promise.all([
+  const [events, consents, sessions, cookieConsents] = await Promise.all([
     db.trackingEvent.findMany({ where: { createdAt: { gte: since } }, orderBy: { createdAt: "desc" }, take: 2000 }),
     db.trackingEvent.findMany({ where: { kind: "consent" } }),
     db.trackingEvent.groupBy({ by: ["sid"], _count: { _all: true }, _max: { createdAt: true } }),
+    db.cookieConsent.findMany({ orderBy: { createdAt: "desc" }, take: 50 }),
   ]);
 
   const accepted = consents.filter((c) => c.label === "accepted").length;
@@ -66,6 +67,7 @@ export async function GET(req: NextRequest) {
     topPages,
     topClicks,
     sessions: sessionList,
+    cookieConsents,
     recent: events.slice(0, 60).map((e) => ({
       id: e.id,
       sid: e.sid.slice(0, 8),

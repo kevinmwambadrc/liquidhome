@@ -106,6 +106,7 @@ export async function POST(req: NextRequest) {
           name: `${first_name} ${last_name}`,
           email,
           tempPassword,
+          customerNo: user?.customerNo,
           orderRef: order.ref,
           planName: pkg.name,
           price: pkg.price,

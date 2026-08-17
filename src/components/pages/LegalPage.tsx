@@ -62,6 +62,8 @@ export function LegalPage({ route }: { route: LegalRoute }) {
                 </h1>
               </div>
 
+              {route === "cookies" && <InteractiveCookieManager />}
+
               <div className="space-y-6">
                 {content.sections.map((s, i) => (
                   <div key={i}>
@@ -102,5 +104,181 @@ export function LegalPage({ route }: { route: LegalRoute }) {
         </div>
       </section>
     </>
+  );
+}
+
+function InteractiveCookieManager() {
+  const [prefs, setPrefs] = useState({
+    necessary: true,
+    functional: true,
+    analytics: true,
+    marketing: false,
+  });
+  const [clientInfo, setClientInfo] = useState<any>(null);
+  const [saving, setSaving] = useState(false);
+  const [feedback, setFeedback] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/cookies/consent", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.ok) {
+          setClientInfo(d.details);
+          if (d.consent) {
+            setPrefs({
+              necessary: true,
+              functional: !!d.consent.functional,
+              analytics: !!d.consent.analytics,
+              marketing: !!d.consent.marketing,
+            });
+          }
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const save = async () => {
+    setSaving(true);
+    setFeedback(null);
+    try {
+      const res = await fetch("/api/cookies/consent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...prefs, source: "page" }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setFeedback(
+          `✓ Préférences enregistrées pour l'IP ${data.details?.ip || "Client"} (${data.details?.city || "Kinshasa"})`
+        );
+      }
+    } catch {
+      setFeedback("Erreur lors de l'enregistrement.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="not-prose mb-10 bg-slate-50 border border-slate-200 rounded-2xl p-6 shadow-sm space-y-5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 pb-4">
+        <div>
+          <h3 className="text-lg font-bold text-brand-navy flex items-center gap-2">
+            <Cookie className="h-5 w-5 text-brand-orange" />
+            Gestionnaire en direct de vos Cookies
+          </h3>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Activez ou désactivez les catégories utiles et urgentes de cookies
+          </p>
+        </div>
+        {clientInfo && (
+          <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold self-start sm:self-auto font-mono">
+            IP : {clientInfo.ip} ({clientInfo.city})
+          </span>
+        )}
+      </div>
+
+      <div className="space-y-4">
+        {/* Urgent */}
+        <div className="bg-white rounded-xl border border-slate-200 p-4 flex items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="h-2.5 w-2.5 rounded-full bg-red-600"></span>
+              <p className="font-bold text-sm text-slate-900">🔴 Cookies Urgents &amp; Essentiels</p>
+              <span className="px-2 py-0.5 rounded-md bg-red-50 text-red-700 text-[10px] font-bold uppercase">
+                Requis
+              </span>
+            </div>
+            <p className="text-xs text-slate-600">
+              Session client, sécurité, protection CSRF et validation des paiements.
+            </p>
+          </div>
+          <span className="text-xs font-bold text-slate-400 whitespace-nowrap">Toujours Actif</span>
+        </div>
+
+        {/* Useful */}
+        <div className="bg-white rounded-xl border border-slate-200 p-4 flex items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="h-2.5 w-2.5 rounded-full bg-emerald-600"></span>
+              <p className="font-bold text-sm text-slate-900">🟢 Cookies Utiles &amp; Navigation</p>
+            </div>
+            <p className="text-xs text-slate-600">
+              Langue préférée (FR/EN) et mémorisation de votre adresse GPS pour la fibre.
+            </p>
+          </div>
+          <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
+            <input
+              type="checkbox"
+              checked={prefs.functional}
+              onChange={(e) => setPrefs({ ...prefs, functional: e.target.checked })}
+              className="sr-only peer"
+            />
+            <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+          </label>
+        </div>
+
+        {/* Performance */}
+        <div className="bg-white rounded-xl border border-slate-200 p-4 flex items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="h-2.5 w-2.5 rounded-full bg-blue-600"></span>
+              <p className="font-bold text-sm text-slate-900">🔵 Cookies de Performance &amp; Speed Test</p>
+            </div>
+            <p className="text-xs text-slate-600">
+              Mesure de la latence des POPs Liquid et historique de vos tests de débit.
+            </p>
+          </div>
+          <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
+            <input
+              type="checkbox"
+              checked={prefs.analytics}
+              onChange={(e) => setPrefs({ ...prefs, analytics: e.target.checked })}
+              className="sr-only peer"
+            />
+            <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+          </label>
+        </div>
+
+        {/* Marketing */}
+        <div className="bg-white rounded-xl border border-slate-200 p-4 flex items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="h-2.5 w-2.5 rounded-full bg-purple-600"></span>
+              <p className="font-bold text-sm text-slate-900">🟣 Cookies Marketing &amp; Offres Communes</p>
+            </div>
+            <p className="text-xs text-slate-600">
+              Offres promotionnelles adaptées aux communes de Kinshasa (Gombe, Limete, etc.).
+            </p>
+          </div>
+          <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
+            <input
+              type="checkbox"
+              checked={prefs.marketing}
+              onChange={(e) => setPrefs({ ...prefs, marketing: e.target.checked })}
+              className="sr-only peer"
+            />
+            <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+          </label>
+        </div>
+      </div>
+
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+        <button
+          type="button"
+          onClick={save}
+          disabled={saving}
+          className="btn-brand text-xs py-2.5 px-5 font-bold w-full sm:w-auto"
+        >
+          {saving ? "Enregistrement..." : "Mettre à jour mes préférences"}
+        </button>
+
+        {feedback && (
+          <span className="text-xs font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-lg">
+            {feedback}
+          </span>
+        )}
+      </div>
+    </div>
   );
 }
