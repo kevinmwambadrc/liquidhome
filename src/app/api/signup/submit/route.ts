@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { hashPassword, refCode, getCurrentUser, generateTempPassword } from "@/lib/auth";
+import { hashPassword, refCode, getCurrentUser, generateTempPassword, syncUserToSupabaseAuth } from "@/lib/auth";
 import { sendEmail, credentialsEmail } from "@/lib/mailer";
 
 export async function POST(req: NextRequest) {
@@ -70,6 +70,8 @@ export async function POST(req: NextRequest) {
           },
         });
         accountCreated = true;
+        // Sync to Supabase Auth table as well
+        await syncUserToSupabaseAuth(email, `${first_name} ${last_name}`, "client", tempPassword);
       }
     }
 

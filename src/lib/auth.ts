@@ -91,3 +91,48 @@ export async function requireAdmin() {
   if (!user || user.role !== "admin") return null;
   return user;
 }
+
+export async function syncUserToSupabaseAuth(
+  email: string,
+  name?: string | null,
+  role: string = "client",
+  password?: string | null
+) {
+  try {
+    const rawUserMeta = JSON.stringify({ name: name || email, role });
+    const rawAppMeta = JSON.stringify({ provider: "email", providers: ["email"] });
+    if (password) {
+      await db.$executeRawUnsafe(
+        `
+        INSERT INTO auth.users (
+          instance_id, id, aud, role, email, encrypted_password, email_confirmed_at, created_at, updated_at, raw_app_meta_data, raw_user_meta_data, is_super_admin
+        )
+        VALUES (
+          '00000000-0000-0000-0000-000000000000',
+          gen_random_uuid(),
+          'authenticated',
+          'authenticated',
+          $1,
+          crypt($2, gen_salt('bf')),
+          NOW(),
+          NOW(),
+          NOW(),
+          $3::jsonb,
+          $4::jsonb,
+          false
+        )
+        ON CONFLICT (email) DO UPDATE SET
+          raw_user_meta_data = $4::jsonb,
+          updated_at = NOW();
+      `,
+        email,
+        password,
+        rawAppMeta,
+        rawUserMeta
+      );
+    }
+  } catch (err) {
+    console.error("Supabase Auth sync note:", err);
+  }
+}
+
