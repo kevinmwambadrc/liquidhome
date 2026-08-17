@@ -200,12 +200,31 @@ export const COVERAGE_ZONES: CoverageZone[] = [
 ];
 
 export function findZoneAt(lat: number, lng: number): CoverageZone | null {
-  // Ray-casting point-in-polygon algorithm
+  // 1. Ray-casting point-in-polygon algorithm
   for (const zone of COVERAGE_ZONES) {
     if (pointInPolygon([lat, lng], zone.polygon)) {
       return zone;
     }
   }
+
+  // 2. Tolerance check for close border points (within ~600m)
+  for (const zone of COVERAGE_ZONES) {
+    let minLat = Infinity,
+      maxLat = -Infinity,
+      minLng = Infinity,
+      maxLng = -Infinity;
+    for (const [zLat, zLng] of zone.polygon) {
+      if (zLat < minLat) minLat = zLat;
+      if (zLat > maxLat) maxLat = zLat;
+      if (zLng < minLng) minLng = zLng;
+      if (zLng > maxLng) maxLng = zLng;
+    }
+    const pad = 0.003;
+    if (lat >= minLat - pad && lat <= maxLat + pad && lng >= minLng - pad && lng <= maxLng + pad) {
+      return zone;
+    }
+  }
+
   return null;
 }
 

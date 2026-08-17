@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { refCode } from "@/lib/auth";
 import { rateLimit, clientKey } from "@/lib/rate-limit";
+import { sendEmail, coverageRequestEmail } from "@/lib/mailer";
 
 export async function POST(req: NextRequest) {
   const rl = rateLimit(clientKey(req, "covreq"), 5, 60_000);
@@ -42,6 +43,20 @@ export async function POST(req: NextRequest) {
         message: message || null,
       },
     });
+
+    if (email) {
+      await sendEmail({
+        to: email,
+        subject: `Demande d'extension de couverture fibre — ${ref}`,
+        html: coverageRequestEmail({
+          name,
+          ref,
+          address: `${address}${houseNo ? ` n° ${houseNo}` : ""}`,
+          commune,
+        }),
+        kind: "coverage_request",
+      }).catch(() => {});
+    }
 
     return NextResponse.json({
       ok: true,

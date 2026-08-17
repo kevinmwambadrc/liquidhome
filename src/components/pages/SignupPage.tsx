@@ -9,7 +9,6 @@ import { KINSHASA_CENTER } from "@/lib/coverage";
 import { CoverageRequestModal } from "@/components/widgets/CoverageRequestModal";
 import {
   MapPin,
-
   Check,
   ChevronRight,
   ChevronLeft,
@@ -28,16 +27,20 @@ import {
   Search,
   IdCard,
   Upload,
+  Crosshair,
+  ExternalLink,
+  AlertCircle,
+  Sparkles,
 } from "lucide-react";
 
-// Dynamically import the real Leaflet map (client-only, no SSR)
-const CoverageMap = dynamic(() => import("@/components/widgets/CoverageMap"), {
+// Dynamically import the real Google Maps component (client-only)
+const GoogleCoverageMap = dynamic(() => import("@/components/widgets/GoogleCoverageMap"), {
   ssr: false,
   loading: () => (
-    <div className="aspect-square w-full rounded-lg overflow-hidden border-2 border-gray-200 bg-gray-100 flex items-center justify-center">
+    <div className="aspect-square w-full rounded-2xl overflow-hidden border-2 border-gray-200 bg-gray-100 flex items-center justify-center">
       <div className="text-center">
         <MapPin className="h-8 w-8 text-brand-orange mx-auto mb-2 animate-pulse" />
-        <p className="text-sm text-brand-muted">Chargement de la carte...</p>
+        <p className="text-sm text-brand-muted font-medium">Chargement de la carte Google...</p>
       </div>
     </div>
   ),
@@ -75,6 +78,10 @@ export function SignupPage() {
   });
   const [currentZone, setCurrentZone] = useState<CoverageZone | null>(null);
   const [checking, setChecking] = useState(false);
+  const [locatingGps, setLocatingGps] = useState(false);
+  const [googleMapsUrl, setGoogleMapsUrl] = useState<string>(
+    `https://www.google.com/maps?q=${KINSHASA_CENTER[0]},${KINSHASA_CENTER[1]}`
+  );
   const [covReqOpen, setCovReqOpen] = useState(false);
 
   // Step 2 - offer
@@ -101,11 +108,70 @@ export function SignupPage() {
   // Step 4 - confirmation
   const [confirmed, setConfirmed] = useState(false);
 
+  // Auto-fill from reverse geocoding
+  const handleAddressDetected = (addr: {
+    street: string;
+    houseNo: string;
+    commune: string;
+    formattedAddress: string;
+    googleMapsUrl: string;
+  }) => {
+    if (addr.street) setStreet(addr.street);
+    if (addr.houseNo) setHouseNo(addr.houseNo);
+    if (addr.googleMapsUrl) setGoogleMapsUrl(addr.googleMapsUrl);
+  };
+
+  // High precision GPS autofill
+  const handleLocateMeDirect = () => {
+    if (!navigator.geolocation) {
+      alert("La géolocalisation n'est pas supportée par votre navigateur.");
+      return;
+    }
+    setLocatingGps(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const lat = Number(pos.coords.latitude.toFixed(6));
+        const lng = Number(pos.coords.longitude.toFixed(6));
+        setMapPos({ lat, lng });
+        setGoogleMapsUrl(`https://www.google.com/maps?q=${lat},${lng}`);
+
+        try {
+          const res = await fetch(`/api/geocode/reverse?lat=${lat}&lng=${lng}`);
+          const data = await res.json();
+          if (data.ok) {
+            if (data.street) setStreet(data.street);
+            if (data.houseNo) setHouseNo(data.houseNo || "1");
+            if (data.zone) {
+              setCurrentZone({
+                id: data.zone,
+                name: data.zone,
+                commune: data.commune || data.zone,
+                polygon: [],
+                status: data.available ? "available" : "coming-soon",
+                color: data.available ? "#F89E3C" : "#888888",
+              });
+            } else {
+              setCurrentZone(null);
+            }
+          }
+        } catch (e) {
+          console.error("GPS Reverse Geocoding Error:", e);
+        } finally {
+          setLocatingGps(false);
+        }
+      },
+      (err) => {
+        setLocatingGps(false);
+        alert("Position GPS non accessible. Vérifiez les autorisations de votre navigateur.");
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
+
   const onCheckLocation = async () => {
     if (!street.trim() || !houseNo.trim()) return;
     setChecking(true);
     try {
-      // Geocode the typed address into real GPS coordinates and move the pin
       let pos = mapPos;
       try {
         const geoRes = await fetch(`/api/geocode?q=${encodeURIComponent(`${street}, Kinshasa`)}`);
@@ -113,9 +179,10 @@ export function SignupPage() {
         if (geo.results?.[0]) {
           pos = { lat: geo.results[0].lat, lng: geo.results[0].lng };
           setMapPos(pos);
+          setGoogleMapsUrl(`https://www.google.com/maps?q=${pos.lat},${pos.lng}`);
         }
       } catch {
-        // keep the manual pin position if geocoding fails
+        // keep manual pin
       }
 
       const res = await fetch("/api/signup/location", {
@@ -262,24 +329,51 @@ export function SignupPage() {
           </div>
 
           {/* Step content */}
-          <div className="bg-white rounded-xl p-6 md:p-8 shadow-sm border border-gray-100">
+          <div className="bg-white rounded-2xl p-6 md:p-8 shadow-sm border border-gray-100">
             {/* STEP 1: Location */}
             {step === 0 && (
               <div>
-                <div className="mb-6">
-                  <h2 className="text-2xl font-bold text-brand-navy mb-2">
-                    {t("signup.findOut")}
-                  </h2>
-                  <p className="text-brand-muted">{t("signup.findOutSub")}</p>
+                <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <h2 className="text-2xl font-bold text-brand-navy mb-1">
+                      {t("signup.findOut")}
+                    </h2>
+                    <p className="text-brand-muted text-sm">{t("signup.findOutSub")}</p>
+                  </div>
+
+                  {/* High Accuracy GPS Button */}
+                  <button
+                    type="button"
+                    onClick={handleLocateMeDirect}
+                    disabled={locatingGps}
+                    className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-brand-orange/10 hover:bg-brand-orange/20 text-brand-orange text-xs font-bold transition-all border border-brand-orange/30 shadow-sm whitespace-nowrap self-start sm:self-auto"
+                  >
+                    {locatingGps ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span>Recherche GPS précise...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Crosshair className="h-4 w-4" />
+                        <span>📍 Utiliser ma position GPS exacte</span>
+                      </>
+                    )}
+                  </button>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Form */}
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-brand-navy mb-2">
-                        {t("signup.street")} <span className="text-brand-orange">*</span>
-                      </label>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="block text-sm font-medium text-brand-navy">
+                          {t("signup.street")} <span className="text-brand-orange">*</span>
+                        </label>
+                        <span className="text-[11px] text-brand-muted">
+                          (Rempli auto via GPS ou saisie)
+                        </span>
+                      </div>
                       <div className="relative">
                         <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-brand-muted" />
                         <input
@@ -287,13 +381,13 @@ export function SignupPage() {
                           value={street}
                           onChange={(e) => setStreet(e.target.value)}
                           placeholder={language === "en" ? "E.g. Avenue de la Justice" : "Ex: Avenue de la Justice"}
-                          className="input-brand pl-10"
+                          className="input-brand pl-10 text-sm font-medium"
                         />
                       </div>
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-brand-navy mb-2">
+                      <label className="block text-sm font-medium text-brand-navy mb-1.5">
                         {t("signup.house")} <span className="text-brand-orange">*</span>
                       </label>
                       <div className="relative">
@@ -303,38 +397,66 @@ export function SignupPage() {
                           value={houseNo}
                           onChange={(e) => setHouseNo(e.target.value)}
                           placeholder={language === "en" ? "E.g. 142" : "Ex: 142"}
-                          className="input-brand pl-10"
+                          className="input-brand pl-10 text-sm font-medium"
                         />
                       </div>
                     </div>
 
-                    {/* Coverage status indicator */}
+                    {/* Coverage status indicator & actions */}
                     {currentZone && (
                       <div
-                        className={`rounded-md border p-3 flex items-start gap-2 ${
+                        className={`rounded-xl border p-4 space-y-2 ${
                           currentZone.status === "available"
-                            ? "bg-green-50 border-green-200 text-green-800"
-                            : "bg-orange-50 border-orange-200 text-orange-800"
+                            ? "bg-green-50/90 border-green-200 text-green-900"
+                            : "bg-amber-50/90 border-amber-200 text-amber-900"
                         }`}
                       >
-                        {currentZone.status === "available" ? (
-                          <CheckCircle2 className="h-5 w-5 flex-shrink-0 mt-0.5" />
-                        ) : (
-                          <XCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
-                        )}
-                        <div className="text-sm">
-                          <p className="font-semibold">
-                            {language === "en" ? "Area" : "Commune"} : {currentZone.name}
-                          </p>
+                        <div className="flex items-start gap-2.5">
                           {currentZone.status === "available" ? (
-                            <p>{language === "en" ? "Liquid Home fiber is available in this area! 🎉" : "La fibre Liquid Home est disponible dans cette zone ! 🎉"}</p>
+                            <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
                           ) : (
-                            <p>{language === "en" ? "This area will be covered soon. Contact us at 4757." : "Cette zone sera bientôt couverte. Contactez-nous au 4757."}</p>
+                            <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
                           )}
+                          <div className="text-xs space-y-0.5">
+                            <p className="font-bold text-sm">
+                              {currentZone.status === "available" ? "Fibre Liquid Home Disponible !" : "Zone en cours de déploiement"}
+                            </p>
+                            <p className="text-brand-muted">
+                              Commune / Quartier : <strong className="text-brand-navy">{currentZone.name}</strong>
+                            </p>
+                            <p className="leading-relaxed">
+                              {currentZone.status === "available"
+                                ? "Votre adresse est éligible à la fibre optique à très haut débit Liquid Home. 🎉"
+                                : "Cette zone n'est pas encore raccordée directement à notre boucle active. Vous pouvez soumettre une demande ou vous pré-inscrire."}
+                            </p>
+                          </div>
                         </div>
+
+                        {/* If NOT covered: Dual choice buttons */}
+                        {currentZone.status !== "available" && (
+                          <div className="pt-2 flex flex-col sm:flex-row gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setCovReqOpen(true)}
+                              className="btn-brand text-xs py-2.5 px-3 flex items-center justify-center gap-1.5 flex-1"
+                            >
+                              <BellPlus className="h-3.5 w-3.5" />
+                              Demander l&apos;extension
+                            </button>
+                            <button
+                              type="button"
+                              onClick={goToOffers}
+                              className="px-3 py-2.5 rounded-lg border-2 border-brand-navy text-brand-navy text-xs font-bold hover:bg-brand-navy hover:text-white transition-colors flex items-center justify-center gap-1 flex-1"
+                            >
+                              Pré-inscription
+                              <ChevronRight className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        )}
                       </div>
                     )}
 
+                    {/* Check / Lock button */}
                     <button
                       onClick={onCheckLocation}
                       disabled={!street.trim() || !houseNo.trim() || checking}
@@ -353,46 +475,49 @@ export function SignupPage() {
                       )}
                     </button>
 
-                    {/* Continue / request coverage based on the real result */}
-                    {currentZone && !checking && (
-                      currentZone.status === "available" ? (
-                        <button onClick={goToOffers} className="btn-navy btn-brand-block w-full py-3.5">
-                          {language === "en" ? "Continue to plans" : "Continuer vers les offres"}
-                          <ChevronRight className="h-4 w-4" />
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => setCovReqOpen(true)}
-                          className="btn-navy btn-brand-block w-full py-3.5"
-                        >
-                          <BellPlus className="h-4 w-4" />
-                          {t("signup.requestCoverage")}
-                        </button>
-                      )
+                    {/* Continue button for covered zones */}
+                    {currentZone && currentZone.status === "available" && !checking && (
+                      <button onClick={goToOffers} className="btn-navy btn-brand-block w-full py-3.5 font-bold shadow-md">
+                        {language === "en" ? "Continue to plans" : "Continuer vers le choix du forfait"}
+                        <ChevronRight className="h-4 w-4" />
+                      </button>
                     )}
 
-                    {/* Coordinates display */}
-                    <div className="bg-brand-soft rounded-md p-3 text-xs">
-                      <p className="text-brand-muted flex items-center gap-1.5 mb-1">
-                        <MapPinned className="h-3.5 w-3.5" />
-                        {t("signup.gps")}
-                      </p>
-                      <p className="font-mono font-semibold text-brand-navy">
-                        {mapPos.lat.toFixed(5)}, {mapPos.lng.toFixed(5)}
-                      </p>
+                    {/* Coordinates & Google Maps Link */}
+                    <div className="bg-brand-soft rounded-xl p-3 text-xs flex items-center justify-between gap-2 border border-gray-100">
+                      <div>
+                        <p className="text-brand-muted flex items-center gap-1.5 mb-0.5">
+                          <MapPinned className="h-3.5 w-3.5 text-brand-orange" />
+                          Coordonnées précises
+                        </p>
+                        <p className="font-mono font-bold text-brand-navy">
+                          {mapPos.lat.toFixed(5)}, {mapPos.lng.toFixed(5)}
+                        </p>
+                      </div>
+                      <a
+                        href={googleMapsUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-[11px] font-bold text-brand-orange hover:underline bg-white px-2.5 py-1.5 rounded-lg border border-gray-200 shadow-sm"
+                      >
+                        <span>Google Maps</span>
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
                     </div>
                   </div>
 
-                  {/* Real interactive map (Leaflet) */}
+                  {/* Real Google Maps Component */}
                   <div>
-                    <div className="text-sm font-medium text-brand-navy mb-2">
-                      {t("signup.availability")}
+                    <div className="flex items-center justify-between text-sm font-medium text-brand-navy mb-2">
+                      <span>{t("signup.availability")}</span>
+                      <span className="text-xs text-brand-muted">Carte Google</span>
                     </div>
                     <p className="text-xs text-brand-muted mb-3">{t("signup.mapHint")}</p>
-                    <CoverageMap
+                    <GoogleCoverageMap
                       position={mapPos}
                       onPositionChange={setMapPos}
                       onZoneChange={setCurrentZone}
+                      onAddressDetected={handleAddressDetected}
                     />
                   </div>
                 </div>

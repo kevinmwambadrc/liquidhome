@@ -146,3 +146,24 @@ export function topupEmail(params: {
     `
   );
 }
+
+export function coverageRequestEmail(params: {
+  name: string;
+  ref: string;
+  address: string;
+  commune?: string | null;
+}): string {
+  return emailShell(
+    "Demande d'extension de couverture fibre",
+    `
+    <p>Bonjour ${params.name},</p>
+    <p>Nous avons bien reçu votre demande d'extension de couverture fibre optique sous la référence <b>${params.ref}</b>.</p>
+    <div style="background:#f6f7fa;border:1px solid #e2e5ee;border-radius:8px;padding:14px;margin:12px 0;">
+      <p style="margin:4px 0;"><b>Adresse demandée :</b> ${params.address}</p>
+      ${params.commune ? `<p style="margin:4px 0;"><b>Zone / Commune :</b> ${params.commune}</p>` : ""}
+    </div>
+    <p>Nos ingénieurs réseau étudient actuellement le tracé de la boucle fibre pour votre secteur. Un conseiller Liquid Home vous tiendra informé de l'avancement du raccordement.</p>
+    <p>Merci de votre confiance !</p>
+    `
+  );
+}

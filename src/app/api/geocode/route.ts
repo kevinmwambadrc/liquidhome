@@ -25,6 +25,29 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: true, results: cached.results });
   }
 
+  const googleApiKey = process.env.GOOGLE_MAPS_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+
+  if (googleApiKey) {
+    try {
+      const gUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(`${q}, RDC`)}&language=fr&components=country:CD&key=${googleApiKey}`;
+      const gRes = await fetch(gUrl, { signal: AbortSignal.timeout(6000) });
+      if (gRes.ok) {
+        const gData = await gRes.json();
+        if (gData.results && gData.results.length > 0) {
+          const results = gData.results.map((r: any) => ({
+            label: r.formatted_address,
+            lat: r.geometry.location.lat,
+            lng: r.geometry.location.lng,
+          }));
+          geoCache.set(q, { at: Date.now(), results });
+          return NextResponse.json({ ok: true, results });
+        }
+      }
+    } catch (e) {
+      console.warn("Google geocode search fallback:", e);
+    }
+  }
+
   const url = new URL("https://nominatim.openstreetmap.org/search");
   url.searchParams.set("q", q);
   url.searchParams.set("format", "jsonv2");
