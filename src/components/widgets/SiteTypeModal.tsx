@@ -15,7 +15,7 @@ const STORAGE_KEY = "liquidhome-sitetype-seen";
 
 export function SiteTypeModal() {
   const [open, setOpen] = useState(false);
-  const { setSiteType, navigate } = useRouter();
+  const { setSiteType, navigate, t } = useRouter();
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -28,7 +28,7 @@ export function SiteTypeModal() {
 
   const choose = (t: "home" | "business") => {
     setSiteType(t);
-    navigate(t);
+    navigate(t === "home" ? "/" : "/business");
     setOpen(false);
     if (typeof window !== "undefined") {
       window.localStorage.setItem(STORAGE_KEY, "1");
@@ -38,10 +38,8 @@ export function SiteTypeModal() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="max-w-md p-0 overflow-hidden bg-white [&>button]:hidden">
-        <DialogTitle className="sr-only">Bienvenue chez Liquid Home RDC</DialogTitle>
-        <DialogDescription className="sr-only">
-          Choisissez votre profil pour une expérience personnalisée
-        </DialogDescription>
+        <DialogTitle className="sr-only">{t("modal.welcome")}</DialogTitle>
+        <DialogDescription className="sr-only">{t("modal.chooseProfile")}</DialogDescription>
         <div className="bg-brand-header-gradient px-6 pt-6 pb-8 text-center relative">
           <button
             onClick={() => setOpen(false)}
@@ -52,7 +50,7 @@ export function SiteTypeModal() {
           </button>
           <div className="flex justify-center mb-4">
             <Image
-              src="/img/colour_liquid_home2.png"
+              src="/img/liquid_home2.png"
               alt="Liquid Home"
               width={324}
               height={100}
@@ -60,7 +58,7 @@ export function SiteTypeModal() {
               className="h-14 w-auto"
             />
           </div>
-          <h2 className="text-xl font-bold text-white">Bienvenue chez Liquid Home RDC</h2>
+          <h2 className="text-xl font-bold text-white">{t("modal.welcome")}</h2>
           <p className="text-white/85 text-sm mt-1">
             Choisissez votre profil pour une expérience personnalisée
           </p>
@@ -74,8 +72,8 @@ export function SiteTypeModal() {
             <div className="h-12 w-12 rounded-full bg-brand-navy group-hover:bg-brand-orange flex items-center justify-center text-white transition-colors">
               <Home className="h-6 w-6" />
             </div>
-            <span className="font-semibold text-brand-navy">Domicile</span>
-            <span className="text-xs text-gray-500 text-center">Internet fibre pour la maison</span>
+            <span className="font-semibold text-brand-navy">{t("modal.home")}</span>
+            <span className="text-xs text-gray-500 text-center">{t("modal.homeSub")}</span>
           </button>
 
           <button
@@ -88,7 +86,7 @@ export function SiteTypeModal() {
             <span className="font-semibold text-brand-navy text-center text-sm leading-tight">
               Petite et Moyenne Enterprise
             </span>
-            <span className="text-xs text-gray-500 text-center">Solutions pro pour entreprises</span>
+            <span className="text-xs text-gray-500 text-center">{t("modal.businessSub")}</span>
           </button>
         </div>
 

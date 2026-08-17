@@ -38,7 +38,7 @@ export function ProductsServicesPage() {
               description="Connexion internet ultra-rapide et illimitée, jusqu'à 300 Mbps, livrée directement à votre domicile via notre réseau fibre optique de pointe."
               points={["Jusqu'à 300 Mbps", "Données illimitées", "Installation en 5 jours", "Support 24/7"]}
               cta="Voir les forfaits"
-              onClick={() => navigate("packages")}
+              onClick={() => navigate("/packages")}
             />
             <ServiceDetailCard
               icon={Tv}
@@ -46,7 +46,7 @@ export function ProductsServicesPage() {
               description="Profitez d'une expérience streaming fluide en HD/4K sur Netflix, Disney+, Prime Video, YouTube et bien d'autres plateformes sans buffering."
               points={["Streaming HD/4K", "Multi-appareils", "Faible latence", "Gaming en ligne"]}
               cta="En savoir plus"
-              onClick={() => navigate("contact-us")}
+              onClick={() => navigate("/contact")}
               accent
             />
             <ServiceDetailCard
@@ -55,7 +55,7 @@ export function ProductsServicesPage() {
               description="Routeurs Wi-Fi dernière génération fournis et configurés par nos techniciens pour une couverture optimale dans toute votre maison."
               points={["Wi-Fi 6 disponible", "Configuration incluse", "Garantie 12 mois", "Remplacement gratuit"]}
               cta="Voir les options"
-              onClick={() => navigate("packages")}
+              onClick={() => navigate("/packages")}
             />
             <ServiceDetailCard
               icon={Headphones}
@@ -63,7 +63,7 @@ export function ProductsServicesPage() {
               description="Une équipe d'assistance locale basée à Kinshasa, joignable 7j/7 par téléphone, WhatsApp et email pour résoudre tous vos problèmes."
               points={["Support local RDC", "7j/7 de 8h à 22h", "Intervention à domicile", "Hotline 4757 gratuite"]}
               cta="Nous contacter"
-              onClick={() => navigate("contact-us")}
+              onClick={() => navigate("/contact")}
               accent
             />
           </div>
@@ -88,7 +88,7 @@ export function ProductsServicesPage() {
                 factures, consommation, support technique et bien plus encore.
               </p>
               <button
-                onClick={() => navigate("myliquid")}
+                onClick={() => navigate("/myliquid")}
                 className="btn-brand inline-flex"
               >
                 <LogIn className="h-4 w-4" />

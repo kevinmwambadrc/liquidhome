@@ -327,3 +327,96 @@ Stage Summary:
 - Lint: clean
 
 No issues found. Site is fully operational.
+
+---
+
+## Task ID: 2 (2026-08-16)
+Agent: main
+Task: Modernisation UI + fonctionnalités opérationnelles (couverture, souscription, dashboard client, back-office admin)
+
+Work Log:
+- Fixed .env DATABASE_URL (Linux sandbox path -> local absolute path)
+- New Prisma schema: User (roles client/admin, passwordHash scrypt, customerNo), Session (tokens, expiry), Order (GPS lat/lng, commune, statuts), ContactMessage, NewsletterSubscriber, Complaint, Invoice, Ticket
+- Auth: src/lib/auth.ts (scrypt hash/verify, sessions en DB, cookie httpOnly lh_session, guards requireUser/requireAdmin)
+- API réelles avec persistance: /api/auth/{login,logout,me}, /api/signup/location (point-in-polygon via lib/coverage + fallback textuel), /api/signup/submit (commande + création compte si mot de passe), /api/contact/submit, /api/newsletter/subscribe, /api/complaint, /api/tickets, /api/invoices/pay (Mobile Money), /api/profile
+- API admin: /api/admin/overview (KPIs + graphiques 14j + répartition forfaits), /api/admin/orders (PATCH statut; passage en "installed" génère automatiquement la 1re facture), /api/admin/complaints, /api/admin/messages
+- Pop-up bienvenue: logo couleur -> logo blanc (identique navbar)
+- Modernisation UI (ligne éditoriale conservée navy #273C88 / orange #F89E3C / Montserrat):
+  - globals.css: boutons dégradés + ombre portée + hover lift (spring), inputs arrondis focus 4px, utilitaire .glass, scroll-behavior smooth, selection orange, cartes hover adoucies
+  - framer-motion: transitions de pages (AnimatePresence), composant Reveal/RevealGroup (révélation au scroll), hero carousel avec Ken Burns + dots de progression animés, menu mobile animé, header verre dépoli au scroll
+- Dashboard client MyLiquid (#myliquid): login réel, onglets Aperçu (KPIs, graphique consommation recharts, ligne fibre), Mes commandes (timeline), Factures (paiement Mobile Money), Support (tickets), Profil
+- Back-office admin (#admin, lien discret footer): login dédié, KPIs, graphiques commandes/forfaits, gestion des statuts de commandes, messages, réclamations, abonnés newsletter
+- Wizard souscription: vérification couverture réelle via API (GPS + adresse), champ mot de passe pour créer le compte MyLiquid, référence de commande affichée en confirmation
+- Seed: scripts/seed.mjs — admin@liquid.tech/Admin1234, jean@demo.cd/Client1234 (commande installée, 2 factures, ticket), réclamation + message + abonné démo
+- Corrections: bug houseNo Prisma (500), balisage JSX menu mobile, lint template shadcn (use-mobile, carousel)
+- Tests E2E navigateur validés: pop-up + logo blanc, checker couverture (adresse couverte), wizard 4 étapes avec commande LH-xxx persistée et liée au compte, login client, ticket support, admin: passage commande en Installée -> facture 89 USD auto-générée -> payée par le client via Mobile Money, réclamation résolue
+
+Verification Results:
+- npm run lint: 0 erreur
+- GET / 200, toutes les API testées renvoient 200 avec persistance vérifiée en base
+
+---
+
+## Task ID: 3 (2026-08-16)
+Agent: main
+Task: Vraies routes (fin du routage hash), correctif placeholder/icône, transitions légales fluides, retrait "KMZ Couverture"
+
+Work Log:
+- Routage hash -> routes Next.js réelles: PATHS centralisés dans src/lib/router.tsx (SiteProvider + navigate via next/navigation), 12 pages créées (/, /business, /produits-et-services, /packages, /contact, /souscrire, /myliquid, /admin, /confidentialite, /cookies, /utilisation, /conditions-generales)
+- Shell partagé déplacé dans src/components/layout/SiteShell.tsx rendu par app/layout.tsx (header, checker masqué sur portails, footer, WhatsApp, pop-up)
+- app/template.tsx: transition d'entrée douce (fade + slide) sur chaque navigation, sans animation de sortie -> pages légales s'enchaînent fluidement
+- État actif du header basé sur usePathname; menu mobile se ferme au changement de route; data-scroll-behavior="smooth" sur <html> (avertissement Next)
+- Fix placeholder/icône: classes .input-brand et .btn-brand déplacées dans @layer components -> les utilitaires Tailwind (pl-10) repriment le padding; le texte saisi démarre après l'icône (40px vérifié)
+- Libellé "KMZ Couverture" supprimé de l'étape 1 du wizard
+- Tous les navigate() migrés vers les chemins réels; LEGAL_LINKS clés simplifiées (privacy/cookies/usage/terms)
+
+Verification Results:
+- 12/12 routes en 200; tsc sans erreur; eslint 0 erreur
+- Navigateur: deep-link /contact, transitions sidebar légales (confidentialite -> cookies -> conditions-generales), padding-left 40px sur l'input email, /souscrire sans KMZ, header/logo/footer navigations, login admin OK
+
+---
+
+## Task ID: 4 (2026-08-16)
+Agent: main
+Task: Session header, géocodage réel, catalogues admin (forfaits/équipements), blog Infos + tutos, i18n EN complet, correctifs visuels
+
+Work Log:
+- Header session-aware: puce utilisateur (initiales + nom, clic -> espace selon rôle) + bouton déconnexion, "Se connecter" si déconnecté; suivi /api/auth/me par route
+- Géocodage réel: /api/geocode (proxy Nominatim, biais Kinshasa); checker d'adresse et wizard géocodent l'adresse saisie -> déplacement de l'épingle + zone réelle (testé: Ngaliema dispo, Masina non dispo); barre de recherche d'adresse intégrée à la carte Leaflet + recentrage auto
+- Demande de couverture: modale publique (nom/tél/email/message + adresse/GPS auto) -> CoverageRequest en base; bouton visible quand non dispo (checker + wizard); vue admin avec statuts nouvelle/contactée/couverte
+- Catalogues pilotés par l'admin: modèles Package + Equipment (router/extender/powerbank) + Post (info/tuto) + API CRUD; forfaits page et wizard lisent /api/packages; équipements affichés par catégorie
+- Admin étendu à 9 onglets: Forfaits (CRUD complet, activer/désactiver), Équipements (CRUD), Infos & Tutos (éditeur à blocs: paragraphe, titre, citation, image+upload, YouTube, audio+upload, bouton; image de couverture; brouillon/publié), Demandes couverture
+- Menu "Infos" (/infos) entre Produits & Services et Contact: blog avec onglets Actualités/Tutoriels, cartes avec couverture, page article /infos/[slug] avec rendu riche; 3 articles seedés dont 2 tutos (routeur, réabonnement)
+- i18n: dictionnaire src/lib/i18n.ts (~150 clés), t() dans le contexte site, sélecteur FR/EN fonctionnel (header + mobile), variantes EN des contenus (FAQ, pourquoi-nous, services, étapes); appliqué au header/footer/checker/wizard/contact/myliquid/pop-up/infos
+- Accueil: bandeau stats (100%/300Mbps/24-7/5j) et section couverture retirés
+- Correctif FAQ rectangle coupé: keyframes animate-accordion-down/up ajoutées (Tailwind v4 @theme)
+- Correctif bouton forfait: classe .btn-navy dédiée (plus de conflit dégradé/navy)
+- Restart dev server nécessaire après db push (client Prisma chargé au démarrage)
+
+Verification Results:
+- tsc 0 erreur, eslint 0 erreur, /api/packages|equipments|posts -> 200
+- Navigateur: EN complet vérifié (nav/FAQ/checker/CTA), puce session admin, géocodage réel (Ngaliema dispo / Masina non dispo + demande DCV enregistrée et visible admin), CRUD forfait vérifié en base (49->55->49), articles/équipements/demandes visibles admin, FAQ accordéon OK
+
+---
+
+## Task ID: 5 (2026-08-16)
+Agent: main
+Task: Sécurité, KYC, ventes/topup, cookies-tracking, PDF, i18n, correctifs UI
+
+Work Log:
+- Sécurité: rate-limiting (login/covreq/eqorder/geocode+cache TTL), en-têtes CSP+XFO+nosniff+Referrer+Permissions via next.config, cookie secure en prod, logs Prisma réduits, caps longueur entrées, prix recalculés serveur, uploads publics KYC typés/limités 8Mo à noms aléatoires
+- Auth: mot de passe provisoire généré + email identifiants (EmailLog + SMTP_URL optionnel nodemailer), mustResetPassword -> vue de réinitialisation forcée (8+ car., lettres+chiffres), événement lh:auth -> header session instantané
+- KYC: pièce d'identité (passeport/carte électeur/permis) téléversée au signup, statut pending -> validation/rejet admin (onglet Vérifications avec aperçu du document), carte de statut sur le dashboard client
+- Ventes: bouton Acheter sur les équipements -> modale commande (quantité, livraison) -> EquipmentOrder + email confirmation; onglet admin Ventes équip. avec statuts; onglet client Mes achats
+- Réabonnement: bouton Réabonnement sur le dashboard -> modale topup (choix forfait, Mobile Money simulé) -> facture payée + email reçu
+- Revenus: classification mensuelle 12 mois (abonnements vs équipements) + exports CSV/Excel (BOM, ;) ventes et emails
+- Cookies: bannière de consentement, tracking pageview/clics/consent uniquement après acceptation (lh_sid + lh_consent), onglet admin Cookies: sessions, top pages, top clics, parcours visiteurs, activité récente
+- Blog: icône H2 supprimée devant les titres (rendu partagé PostBlocks), options alignement (gauche/centre/droite) + styles de bouton (orange/navy/contour), prévisualisation en direct, guide couverture 16:9 (1200x675)
+- PDF: /api/legal/pdf?doc=privacy|terms (pdf-lib, bandeau navy + logo couleur, pagination) + boutons Télécharger en PDF
+- Menus: Domicile et PME séparés, 4 entrées sur une ligne chacun, ancres /business#home #services #why #contact avec scroll, siteType/langue persistés (localStorage)
+- Divers: page 404 brandée, déconnexion admin corrigée (appel API réel), logo couleur sur carte de connexion blanche, zoom Ken Burns retiré du hero (slide conservé), double flèche retour corrigée
+
+Verification Results:
+- tsc 0 erreur, eslint 0 erreur
+- API testées: achat EQ-... (26 USD en base), KYC complet (upload->pending->approved), login temp pwd -> mustReset -> reset OK, topup 89 USD + facture septembre, export CSV conforme, tracking (consent+pageview+clics en base), PDF application/pdf
+- Navigateur: menu PME persistant 4 items + ancre #services, article sans badge H2, bannière cookies fonctionnelle

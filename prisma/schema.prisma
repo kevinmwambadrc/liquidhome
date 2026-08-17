@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -14,19 +8,248 @@ datasource db {
 }
 
 model User {
+  id                String    @id @default(cuid())
+  email             String    @unique
+  passwordHash      String?
+  name              String?
+  role              String    @default("client") // client | admin
+  phone             String?
+  customerNo        String?
+  mustResetPassword Boolean   @default(false)
+  // KYC identity verification
+  kycStatus         String?   // null = non soumis | pending | approved | rejected
+  kycDocType        String?   // passport | voter | license | other
+  kycDocUrl         String?
+  kycReviewedAt     DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  sessions          Session[]
+  orders            Order[]
+  invoices          Invoice[]
+  tickets           Ticket[]
+  equipmentOrders   EquipmentOrder[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model Order {
+  id               String   @id @default(cuid())
+  ref              String   @unique
+  userId           String?
+  user             User?    @relation(fields: [userId], references: [id])
+  firstName        String
+  lastName         String
+  email            String
+  phone            String
+  packageId        String
+  packagePrice     Float    @default(0)
+  streetAddress    String
+  houseNo          String
+  commune          String?
+  lat              Float?
+  lng              Float?
+  installationDate String?
+  notes            String?
+  status           String   @default("pending") // pending | approved | installed | cancelled
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model ContactMessage {
+  id             String   @id @default(cuid())
+  firstName      String
+  lastName       String
+  email          String
+  telephone      String
+  city           String?
+  areaOfInterest String   @default("home")
+  requirements   String?
+  handled        Boolean  @default(false)
+  createdAt      DateTime @default(now())
+}
+
+model NewsletterSubscriber {
   id        String   @id @default(cuid())
   email     String   @unique
   name      String?
   createdAt DateTime @default(now())
+}
+
+model Complaint {
+  id        String   @id @default(cuid())
+  ticket    String   @unique
+  userId    String?
+  name      String
+  email     String
+  telephone String
+  message   String
+  status    String   @default("open") // open | in-progress | resolved
+  createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
-model Post {
+model Invoice {
+  id             String    @id @default(cuid())
+  number         String    @unique
+  userId         String
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orderRef       String?
+  amount         Float
+  status         String    @default("unpaid") // unpaid | paid
+  method         String?   // mobile-money | card | maishapay
+  period         String
+  transactionRef String?   // MaishaPay transactionRefId
+  operatorRef    String?   // Mobile Money / Bank operator reference
+  paidAt         DateTime?
+  issuedAt       DateTime  @default(now())
+  dueAt          DateTime?
+}
+
+model Ticket {
   id        String   @id @default(cuid())
-  title     String
-  content   String?
-  published Boolean  @default(false)
-  authorId  String
+  ref       String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject   String
+  message   String
+  status    String   @default("open") // open | in-progress | resolved
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model Package {
+  id         String   @id @default(cuid())
+  slug       String   @unique
+  name       String
+  price      Float
+  currency   String   @default("USD")
+  speed      String
+  volume     String   @default("Illimités")
+  features   String   @default("[]") // JSON array of strings
+  badge      String?
+  highlighted Boolean  @default(false)
+  active     Boolean  @default(true)
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Equipment {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  name        String
+  category    String   // router | extender | powerbank
+  price       Float    @default(0)
+  description String
+  imageUrl    String?
+  active      Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Post {
+  id           String   @id @default(cuid())
+  slug         String   @unique
+  title        String
+  category     String   @default("info") // info | tuto
+  excerpt      String   @default("")
+  coverImage   String?
+  content      String   @default("[]") // JSON array of blocks
+  published    Boolean  @default(true)
+  authorName   String   @default("Liquid Home")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model CoverageRequest {
+  id        String   @id @default(cuid())
+  ref       String   @unique
+  name      String
+  phone     String
+  email     String?
+  address   String
+  houseNo   String?
+  commune   String?
+  lat       Float?
+  lng       Float?
+  message   String?
+  status    String   @default("new") // new | contacted | covered
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model EquipmentOrder {
+  id              String    @id @default(cuid())
+  ref             String    @unique
+  userId          String?
+  user            User?     @relation(fields: [userId], references: [id])
+  // Snapshot of purchased items: [{ slug, name, unitPrice, qty }]
+  items           String    @default("[]")
+  total           Float     @default(0)
+  buyerName       String
+  buyerPhone      String
+  buyerEmail      String
+  deliveryAddress String
+  paymentStatus   String    @default("unpaid") // unpaid | paid
+  transactionRef  String?   // MaishaPay transactionRefId
+  operatorRef     String?   // Mobile Money / Bank operator reference
+  status          String    @default("pending") // pending | confirmed | delivered | cancelled
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model PaymentTransaction {
+  id             String    @id @default(cuid())
+  ref            String    @unique // Internal transaction reference (TX-xxxx)
+  gateway        String    @default("maishapay") // maishapay
+  gatewayMode    String    @default("sandbox") // sandbox | live
+  type           String    // invoice | topup | equipment
+  targetId       String?   // invoice id or equipment order ref
+  userId         String?
+  amount         Float
+  currency       String    @default("USD")
+  status         String    @default("pending") // pending | completed | failed | cancelled
+  description    String?
+  transactionRef String?   // MaishaPay transactionRefId
+  operatorRef    String?   // Operator reference ID
+  rawResponse    String?   // JSON of callback payload
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([ref])
+  @@index([targetId])
+  @@index([userId])
+}
+
+model EmailLog {
+  id        String   @id @default(cuid())
+  toEmail   String
+  subject   String
+  body      String
+  sent      Boolean  @default(false) // true when actually delivered via SMTP
+  error     String?
+  kind      String   @default("generic") // credentials | order | topup | ...
+  createdAt DateTime @default(now())
+}
+
+model TrackingEvent {
+  id        String   @id @default(cuid())
+  sid       String   // anonymous visitor session id (lh_sid cookie)
+  userId    String?
+  kind      String   // pageview | click | consent | search | signup-start | ...
+  path      String?
+  label     String?  // clicked element text / search query
+  meta      String?  // JSON extras (referrer, viewport, ...)
+  createdAt DateTime @default(now())
+
+  @@index([sid, createdAt])
+  @@index([kind, createdAt])
 }

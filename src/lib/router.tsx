@@ -1,109 +1,111 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
+import { useRouter as useNextRouter } from "next/navigation";
+import { Lang, translate } from "@/lib/i18n";
 
-export type Route =
-  | "home"
-  | "business"
-  | "products-and-services"
-  | "packages"
-  | "contact-us"
-  | "signup"
-  | "myliquid"
-  | "privacy-policy"
-  | "cookies-policy"
-  | "usage"
-  | "terms-and-conditions";
+/** Canonical site paths — one real page per entry. */
+export const PATHS = {
+  home: "/",
+  business: "/business",
+  productsAndServices: "/produits-et-services",
+  businessProductsAndServices: "/business/produits-et-services",
+  packages: "/packages",
+  contact: "/contact",
+  signup: "/souscrire",
+  myliquid: "/myliquid",
+  admin: "/admin",
+  privacy: "/confidentialite",
+  cookies: "/cookies",
+  usage: "/utilisation",
+  terms: "/conditions-generales",
+} as const;
+
+export type LegalRoute = "privacy" | "cookies" | "usage" | "terms";
+
+export const LEGAL_ROUTES: LegalRoute[] = ["privacy", "cookies", "usage", "terms"];
 
 export type SiteType = "home" | "business";
-export type Language = "fr" | "en";
+export type Language = Lang;
 
-interface RouterState {
-  route: Route;
+interface SiteState {
   siteType: SiteType;
   language: Language;
-  navigate: (route: Route) => void;
+  signupPackage?: string;
   setSiteType: (t: SiteType) => void;
   setLanguage: (l: Language) => void;
-  signupPackage?: string;
   setSignupPackage: (p?: string) => void;
+  /** Navigate to a real path, e.g. navigate("/contact"). */
+  navigate: (path: string) => void;
+  /** Translate a UI key using the active language. */
+  t: (key: string) => string;
 }
 
-const RouterContext = createContext<RouterState | null>(null);
+const SiteContext = createContext<SiteState | null>(null);
 
-const VALID_ROUTES: Route[] = [
-  "home",
-  "business",
-  "products-and-services",
-  "packages",
-  "contact-us",
-  "signup",
-  "myliquid",
-  "privacy-policy",
-  "cookies-policy",
-  "usage",
-  "terms-and-conditions",
-];
-
-export function RouterProvider({ children }: { children: ReactNode }) {
-  // Always initialize to "home" so server and client render identically.
-  // The actual hash route is applied after hydration via a deferred effect.
-  const [route, setRoute] = useState<Route>("home");
-  const [siteType, setSiteType] = useState<SiteType>("home");
-  const [language, setLanguage] = useState<Language>("fr");
+export function SiteProvider({ children }: { children: ReactNode }) {
+  const nextRouter = useNextRouter();
+  const [siteType, setSiteTypeState] = useState<SiteType>("home");
+  const [language, setLanguageState] = useState<Language>("fr");
   const [signupPackage, setSignupPackage] = useState<string | undefined>(undefined);
 
-  const navigate = useCallback((r: Route) => {
-    setRoute(r);
-    // Scroll to top on navigation
-    if (typeof window !== "undefined") {
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }
-    // Update hash without triggering reload
-    if (typeof window !== "undefined") {
-      const newHash = r === "home" ? "" : `#${r}`;
-      if (window.location.hash !== newHash) {
-        window.history.replaceState(null, "", newHash || window.location.pathname);
+  // Restore persisted site type / language after mount (SSR-safe)
+  useEffect(() => {
+    try {
+      const st = window.localStorage.getItem("lh-site-type");
+      const lg = window.localStorage.getItem("lh-language");
+      if (st || lg) {
+        queueMicrotask(() => {
+          if (st === "home" || st === "business") setSiteTypeState(st);
+          if (lg === "fr" || lg === "en") setLanguageState(lg);
+        });
       }
-    }
+    } catch {}
   }, []);
 
-  // Sync route from URL hash after hydration (deferred to avoid hydration mismatch)
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const hash = window.location.hash.replace("#", "") as Route;
-    if (VALID_ROUTES.includes(hash)) {
-      // Defer the state update to after the hydration commit
-      Promise.resolve().then(() => setRoute(hash));
-    }
+  const setSiteType = useCallback((ty: SiteType) => {
+    setSiteTypeState(ty);
+    try {
+      window.localStorage.setItem("lh-site-type", ty);
+    } catch {}
   }, []);
 
-  // Listen to hashchange (back/forward)
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const onHash = () => {
-      const hash = window.location.hash.replace("#", "") as Route;
-      if (VALID_ROUTES.includes(hash)) {
-        setRoute(hash);
-      } else if (hash === "") {
-        setRoute("home");
-      }
-    };
-    window.addEventListener("hashchange", onHash);
-    return () => window.removeEventListener("hashchange", onHash);
+  const setLanguage = useCallback((l: Language) => {
+    setLanguageState(l);
+    try {
+      window.localStorage.setItem("lh-language", l);
+    } catch {}
   }, []);
+
+  const navigate = useCallback(
+    (path: string) => {
+      nextRouter.push(path);
+    },
+    [nextRouter]
+  );
+
+  const t = useCallback((key: string) => translate(language, key), [language]);
 
   return (
-    <RouterContext.Provider
-      value={{ route, siteType, language, navigate, setSiteType, setLanguage, signupPackage, setSignupPackage }}
+    <SiteContext.Provider
+      value={{
+        siteType,
+        language,
+        signupPackage,
+        setSiteType,
+        setLanguage,
+        setSignupPackage,
+        navigate,
+        t,
+      }}
     >
       {children}
-    </RouterContext.Provider>
+    </SiteContext.Provider>
   );
 }
 
 export function useRouter() {
-  const ctx = useContext(RouterContext);
-  if (!ctx) throw new Error("useRouter must be used within RouterProvider");
+  const ctx = useContext(SiteContext);
+  if (!ctx) throw new Error("useRouter must be used within SiteProvider");
   return ctx;
 }

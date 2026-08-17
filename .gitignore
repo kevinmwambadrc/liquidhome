@@ -23,6 +23,10 @@ node_modules
 # misc
 .DS_Store
 *.pem
+*.zip
+*.db
+*.sqlite
+*.sqlite3
 
 # debug
 npm-debug.log*

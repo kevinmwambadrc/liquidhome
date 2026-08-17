@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { HeroCarousel } from "@/components/sections/HeroCarousel";
 import { Newsletter } from "@/components/sections/Newsletter";
 import { WhyChooseUs } from "@/components/sections/WhyChooseUs";
@@ -8,6 +9,20 @@ import { useRouter } from "@/lib/router";
 import { ArrowRight, Building2, Phone, BarChart3, Rocket, CheckCircle2 } from "lucide-react";
 
 export function BusinessPage() {
+  // Scroll explicitly to the section matching the URL hash (#home, #services,
+  // #why, #contact), on first mount AND when the hash changes while already
+  // on this page (e.g. clicking "Services" again in the header).
+  useEffect(() => {
+    const scrollToHash = () => {
+      const hash = window.location.hash.replace("#", "");
+      if (!hash) return;
+      const el = document.getElementById(hash);
+      if (el) setTimeout(() => el.scrollIntoView({ behavior: "smooth" }), 300);
+    };
+    scrollToHash();
+    window.addEventListener("hashchange", scrollToHash);
+    return () => window.removeEventListener("hashchange", scrollToHash);
+  }, []);
   const { navigate } = useRouter();
 
   return (
@@ -15,7 +30,7 @@ export function BusinessPage() {
       <HeroCarousel />
 
       {/* Hero text */}
-      <section className="bg-brand-navy text-white py-12">
+      <section id="home" className="bg-brand-navy text-white py-12 scroll-mt-24">
         <div className="max-w-7xl mx-auto px-4 text-center">
           <div className="inline-flex items-center gap-2 bg-brand-orange/20 text-brand-orange px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wide mb-3">
             <Building2 className="h-3.5 w-3.5" />
@@ -30,9 +45,24 @@ export function BusinessPage() {
         </div>
       </section>
 
-      {/* 3 sidebar boxes */}
-      <section className="py-16 bg-white">
+      {/* Services — right after the hero section */}
+      <section id="services" className="py-16 bg-white scroll-mt-24">
         <div className="max-w-7xl mx-auto px-4">
+          <div className="text-center mb-10">
+            <h2 className="text-3xl md:text-4xl font-bold text-brand-navy mb-2">
+              Nos services
+            </h2>
+            <p className="text-brand-muted max-w-2xl mx-auto mb-4">
+              Des services conçus pour la performance et la sérénité de votre entreprise
+            </p>
+            <button
+              onClick={() => navigate("/business/produits-et-services")}
+              className="inline-flex items-center gap-2 text-sm font-semibold text-brand-orange hover:gap-3 transition-all"
+            >
+              Découvrir tous nos produits &amp; services
+              <ArrowRight className="h-4 w-4" />
+            </button>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {BUSINESS_SIDEBARS.map((box, i) => {
               const Icon = box.icon;
@@ -61,7 +91,7 @@ export function BusinessPage() {
       </section>
 
       {/* Business features */}
-      <section className="py-16 bg-brand-soft">
+      <section id="why" className="py-16 bg-brand-soft scroll-mt-24">
         <div className="max-w-7xl mx-auto px-4">
           <div className="text-center mb-10">
             <h2 className="text-3xl md:text-4xl font-bold text-brand-navy mb-2">
@@ -97,7 +127,7 @@ export function BusinessPage() {
       <WhyChooseUs />
 
       {/* CTA band */}
-      <section className="bg-gradient-to-r from-brand-orange to-brand-orange-hover text-white py-12">
+      <section id="contact" className="bg-gradient-to-r from-brand-orange to-brand-orange-hover text-white py-12 scroll-mt-24">
         <div className="max-w-5xl mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-6">
           <div>
             <h2 className="text-2xl md:text-3xl font-bold mb-2">
@@ -109,14 +139,14 @@ export function BusinessPage() {
           </div>
           <div className="flex flex-col sm:flex-row gap-3">
             <button
-              onClick={() => navigate("contact-us")}
+              onClick={() => navigate("/contact")}
               className="bg-white text-brand-navy font-bold uppercase px-6 py-3 rounded-md hover:bg-gray-100 transition-colors flex items-center gap-2"
             >
               Demander un devis
               <ArrowRight className="h-4 w-4" />
             </button>
             <button
-              onClick={() => navigate("signup")}
+              onClick={() => navigate("/souscrire")}
               className="bg-brand-navy text-white font-bold uppercase px-6 py-3 rounded-md hover:bg-brand-navy-light transition-colors"
             >
               Souscrire maintenant

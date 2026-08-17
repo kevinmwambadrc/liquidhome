@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import { Mail, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import { useRouter } from "@/lib/router";
 
 export function Newsletter() {
+  const { t } = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
@@ -44,26 +46,22 @@ export function Newsletter() {
             <Mail className="h-7 w-7 text-white" />
           </div>
         </div>
-        <h2 className="text-2xl md:text-3xl font-bold mb-2">
-          Rester à jour avec toutes les dernières nouvelles et informations
-        </h2>
-        <p className="text-white/80 text-sm mb-6">
-          Inscrivez-vous à notre newsletter pour recevoir nos offres exclusives et l'actualité de la fibre en RDC.
-        </p>
+        <h2 className="text-2xl md:text-3xl font-bold mb-2">{t("home.newsletterTitle")}</h2>
+        <p className="text-white/80 text-sm mb-6">{t("home.newsletterText")}</p>
 
         <form onSubmit={onSubmit} className="flex flex-col sm:flex-row gap-3 max-w-2xl mx-auto">
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Votre nom (optionnel)"
+            placeholder={t("home.newsletterName")}
             className="flex-1 rounded-md px-4 py-3 text-sm text-gray-900 bg-white border border-gray-300 focus:outline-none focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/30"
           />
           <input
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="Votre adresse email"
+            placeholder={t("home.newsletterEmail")}
             required
             className="flex-1 rounded-md px-4 py-3 text-sm text-gray-900 bg-white border border-gray-300 focus:outline-none focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/30"
           />
@@ -71,10 +69,10 @@ export function Newsletter() {
             {loading ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Envoi...
+                {t("covreq.sending")}
               </>
             ) : (
-              "S'abonner"
+              t("home.newsletterBtn")
             )}
           </button>
         </form>
@@ -95,19 +93,6 @@ export function Newsletter() {
             {result.message}
           </div>
         )}
-
-        <p className="mt-4 text-xs text-white/60">
-          Pour plus d'information, visitez notre{" "}
-          <button
-            onClick={() => {
-              const evt = new CustomEvent("navigate", { detail: "privacy-policy" });
-              window.dispatchEvent(evt);
-            }}
-            className="text-brand-orange hover:underline"
-          >
-            Politique de confidentialité
-          </button>
-        </p>
       </div>
     </section>
   );

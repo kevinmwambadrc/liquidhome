@@ -1,11 +1,11 @@
 "use client";
 
 import { Phone, Mail, MapPin, Clock } from "lucide-react";
-import { useRouter } from "@/lib/router";
+import { useRouter, PATHS } from "@/lib/router";
 import { CONTACT_INFO, SOCIAL_LINKS, LEGAL_LINKS } from "@/lib/content";
 
 export function SiteFooter() {
-  const { navigate } = useRouter();
+  const { navigate, t } = useRouter();
 
   return (
     <footer className="bg-brand-navy text-white mt-auto">
@@ -20,26 +20,26 @@ export function SiteFooter() {
             {LEGAL_LINKS.slice(0, 2).map((l) => (
               <li key={l.route}>
                 <button
-                  onClick={() => navigate(l.route)}
-                  className="text-white/80 hover:text-brand-orange transition-colors text-left"
-                >
-                  {l.label}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
+                onClick={() => navigate(PATHS[l.route])}
+                className="text-white/80 hover:text-brand-orange transition-colors text-left"
+              >
+                {l.label}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
 
-        {/* Col 2 - Usage */}
-        <div>
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-brand-orange mb-3">
-            Informations
-          </h3>
-          <ul className="space-y-2 text-sm">
-            {LEGAL_LINKS.slice(2).map((l) => (
-              <li key={l.route}>
-                <button
-                  onClick={() => navigate(l.route)}
+      {/* Col 2 - Usage */}
+      <div>
+        <h3 className="text-sm font-semibold uppercase tracking-wide text-brand-orange mb-3">
+          Informations
+        </h3>
+        <ul className="space-y-2 text-sm">
+          {LEGAL_LINKS.slice(2).map((l) => (
+            <li key={l.route}>
+              <button
+                onClick={() => navigate(PATHS[l.route])}
                   className="text-white/80 hover:text-brand-orange transition-colors text-left"
                 >
                   {l.label}
@@ -48,7 +48,7 @@ export function SiteFooter() {
             ))}
             <li>
               <button
-                onClick={() => navigate("packages")}
+                onClick={() => navigate("/packages")}
                 className="text-white/80 hover:text-brand-orange transition-colors text-left"
               >
                 Forfaits Libota
@@ -56,7 +56,7 @@ export function SiteFooter() {
             </li>
             <li>
               <button
-                onClick={() => navigate("signup")}
+                onClick={() => navigate("/souscrire")}
                 className="text-white/80 hover:text-brand-orange transition-colors text-left"
               >
                 Souscrire
@@ -140,7 +140,7 @@ export function SiteFooter() {
               Restez informé des dernières offres
             </p>
             <button
-              onClick={() => navigate("home")}
+              onClick={() => navigate("/")}
               className="text-xs text-brand-orange hover:underline"
             >
               Voir les forfaits →
@@ -152,13 +152,27 @@ export function SiteFooter() {
       {/* Lower footer */}
       <div className="border-t border-white/10">
         <div className="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-white/70">
-          <p>© Copyright 2026 Liquid Home. Tous droits réservés.</p>
-          <button
-            onClick={() => navigate("terms-and-conditions")}
-            className="hover:text-brand-orange transition-colors"
-          >
-            Termes et conditions
-          </button>
+          <p>{t("footer.rights")}</p>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => navigate("/myliquid")}
+              className="hover:text-brand-orange transition-colors"
+            >
+              Espace client
+            </button>
+            <button
+              onClick={() => navigate("/admin")}
+              className="text-white/40 hover:text-brand-orange transition-colors"
+            >
+              Back-office
+            </button>
+            <button
+              onClick={() => navigate(PATHS.terms)}
+              className="hover:text-brand-orange transition-colors"
+            >
+              {t("footer.terms")}
+            </button>
+          </div>
         </div>
       </div>
     </footer>

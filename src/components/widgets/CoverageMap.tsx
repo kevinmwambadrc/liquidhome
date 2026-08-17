@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   MapContainer,
   TileLayer,
@@ -20,6 +20,9 @@ import {
   Crosshair,
   CheckCircle2,
   Clock,
+  Search,
+  Loader2,
+  MapPin,
 } from "lucide-react";
 import {
   COVERAGE_ZONES,
@@ -44,6 +47,94 @@ interface CoverageMapProps {
   position: { lat: number; lng: number };
   onPositionChange: (pos: { lat: number; lng: number }) => void;
   onZoneChange?: (zone: CoverageZone | null) => void;
+}
+
+/** Fly the map to the pin whenever the position is changed from outside (form geocoding). */
+function MapRecenter({ position }: { position: { lat: number; lng: number } }) {
+  const map = useMap();
+  const last = useRef(position);
+  useEffect(() => {
+    if (last.current !== position && (position.lat !== last.current.lat || position.lng !== last.current.lng)) {
+      map.flyTo([position.lat, position.lng], Math.max(map.getZoom(), 15), { duration: 0.8 });
+    }
+    last.current = position;
+  }, [position, map]);
+  return null;
+}
+
+/** Address search powered by Nominatim geocoding (via our /api/geocode proxy). */
+function SearchBox({
+  onPositionChange,
+  onZoneChange,
+}: {
+  onPositionChange: (pos: { lat: number; lng: number }) => void;
+  onZoneChange?: (zone: CoverageZone | null) => void;
+}) {
+  const map = useMap();
+  const [q, setQ] = useState("");
+  const [results, setResults] = useState<{ label: string; lat: number; lng: number }[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [open, setOpen] = useState(false);
+
+  const search = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (q.trim().length < 3) return;
+    setLoading(true);
+    setOpen(true);
+    setResults([]);
+    try {
+      const res = await fetch(`/api/geocode?q=${encodeURIComponent(`${q}, Kinshasa`)}`);
+      const data = await res.json();
+      setResults(data.results ?? []);
+    } catch {
+      setResults([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const pick = (r: { lat: number; lng: number; label: string }) => {
+    onPositionChange({ lat: r.lat, lng: r.lng });
+    if (onZoneChange) onZoneChange(findZoneAt(r.lat, r.lng));
+    map.flyTo([r.lat, r.lng], 16, { duration: 0.8 });
+    setOpen(false);
+    setQ(r.label.split(",")[0]);
+  };
+
+  return (
+    <div className="leaflet-top leaflet-left" style={{ top: 10, left: 10, right: 10 }}>
+      <div className="leaflet-control w-64 max-w-full">
+        <form onSubmit={search} className="relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-brand-muted" />
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            onFocus={() => results.length > 0 && setOpen(true)}
+            placeholder="Rechercher une adresse…"
+            className="w-full rounded-lg border border-gray-300 bg-white shadow-md pl-8 pr-8 py-2 text-xs text-gray-900 focus:outline-none focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/30"
+          />
+          {loading && (
+            <Loader2 className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 animate-spin text-brand-orange" />
+          )}
+        </form>
+        {open && (loading || results.length > 0) && (
+          <div className="mt-1 rounded-lg border border-gray-200 bg-white shadow-lg max-h-44 overflow-y-auto z-[1000]">
+            {loading && <p className="px-3 py-2 text-xs text-brand-muted">Recherche…</p>}
+            {results.map((r, i) => (
+              <button
+                key={i}
+                onClick={() => pick(r)}
+                className="w-full text-left px-3 py-2 text-xs text-brand-navy hover:bg-orange-50 flex items-start gap-2 border-t border-gray-100 first:border-t-0"
+              >
+                <MapPin className="h-3.5 w-3.5 text-brand-orange flex-shrink-0 mt-0.5" />
+                <span className="line-clamp-2">{r.label}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }
 
 function MapClickHandler({
@@ -262,6 +353,8 @@ export default function CoverageMap({
           onPositionChange={onPositionChange}
           onZoneChange={onZoneChange}
         />
+        <MapRecenter position={position} />
+        <SearchBox onPositionChange={onPositionChange} onZoneChange={onZoneChange} />
         <ZoomControl position="topleft" />
 
         {/* Custom controls - must be inside MapContainer to use useMap() */}

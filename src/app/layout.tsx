@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Montserrat } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
+import { SiteProvider } from "@/lib/router";
+import { SiteShell } from "@/components/layout/SiteShell";
 
 const montserrat = Montserrat({
   variable: "--font-montserrat",
@@ -54,11 +56,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr" suppressHydrationWarning>
+    <html lang="fr" suppressHydrationWarning data-scroll-behavior="smooth">
       <body
         className={`${montserrat.variable} antialiased bg-background text-foreground font-sans`}
       >
-        {children}
+        <SiteProvider>
+          <SiteShell>{children}</SiteShell>
+        </SiteProvider>
         <Toaster />
       </body>
     </html>

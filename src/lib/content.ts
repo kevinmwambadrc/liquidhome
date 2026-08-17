@@ -2,6 +2,7 @@ import {
   Home,
   Building2,
   Package,
+  Newspaper,
   Phone,
   HelpCircle,
   Facebook,
@@ -22,11 +23,21 @@ import {
   CheckCircle2,
 } from "lucide-react";
 
+// Separate menus, 4 single-line entries each: "Domicile" and "PME" universes.
 export const NAV_ITEMS = [
-  { label: "Domicile", route: "home" as const, icon: Home },
-  { label: "Produits & Services", route: "products-and-services" as const, icon: Package },
-  { label: "Contact", route: "contact-us" as const, icon: Phone },
+  { label: "Domicile", labelEn: "Home", route: "/" as const, icon: Home, audience: "home" as const },
+  { label: "Produits & Services", labelEn: "Products & Services", route: "/produits-et-services" as const, icon: Package, audience: "home" as const },
+  { label: "Infos", labelEn: "News", route: "/infos" as const, icon: Newspaper, audience: "home" as const },
+  { label: "Contact", labelEn: "Contact", route: "/contact" as const, icon: Phone, audience: "home" as const },
+  { label: "Accueil PME", labelEn: "SME Home", route: "/business#home" as const, icon: Building2, audience: "business" as const },
+  { label: "Produits & Services", labelEn: "Products & Services", route: "/business/produits-et-services" as const, icon: Package, audience: "business" as const },
+  { label: "Infos", labelEn: "News", route: "/infos" as const, icon: Newspaper, audience: "business" as const },
+  { label: "Devis", labelEn: "Quote", route: "/contact" as const, icon: Phone, audience: "business" as const },
 ];
+
+export function navItemsFor(siteType: "home" | "business") {
+  return NAV_ITEMS.filter((i) => i.audience === siteType);
+}
 
 export const SITE_TYPE_OPTIONS = [
   { id: "home" as const, label: "Domicile", labelEn: "Home", icon: Home },
@@ -132,6 +143,25 @@ export const PACKAGES: PackagePlan[] = [
   },
 ];
 
+export const WHY_CHOOSE_REASONS_EN: { title: string; description: string }[] = [
+  {
+    title: "Ultra-fast internet connectivity",
+    description: "Enjoy unmatched fiber optic speed for the whole home, with no compromise.",
+  },
+  {
+    title: "Secure and reliable network",
+    description: "Cutting-edge infrastructure, monitored 24/7 for an always-on connection.",
+  },
+  {
+    title: "Contract terms that suit you",
+    description: "Choose flexibility: commitments adapted to your needs and budget.",
+  },
+  {
+    title: "Dedicated support team",
+    description: "Local customer support based in Kinshasa, reachable Monday to Sunday.",
+  },
+];
+
 export const WHY_CHOOSE_REASONS = [
   {
     title: "Connectivité internet ultra-rapide",
@@ -156,9 +186,9 @@ export const WHY_CHOOSE_REASONS = [
 ];
 
 export const HOME_CTAS = [
-  { label: "Souscrire", route: "signup" as const, icon: Rocket, primary: true },
-  { label: "Produits & Services", route: "products-and-services" as const, icon: Package, primary: false },
-  { label: "Besoin d'aide?", route: "contact-us" as const, icon: HelpCircle, primary: false },
+  { label: "Souscrire", route: "/souscrire" as const, icon: Rocket, primary: true },
+  { label: "Produits & Services", route: "/produits-et-services" as const, icon: Package, primary: false },
+  { label: "Besoin d'aide?", route: "/contact" as const, icon: HelpCircle, primary: false },
 ];
 
 export const BUSINESS_SIDEBARS = [
@@ -247,13 +277,20 @@ export const BANNERS = [
   },
 ];
 
+export const SERVICE_OPTIONS_EN: { title: string; description: string; cta: string }[] = [
+  { title: "Internet plans", description: "Ultra-fast, unlimited and unbeatable", cta: "Discover more" },
+  { title: "Mobile data", description: "Stay connected on the move with our flexible data plans", cta: "Coming soon" },
+  { title: "Equipment & Routers", description: "Latest-generation Wi-Fi routers for optimal coverage", cta: "Learn more" },
+  { title: "Dedicated support", description: "A team of experts at your service, 7 days a week", cta: "Contact us" },
+];
+
 export const SERVICE_OPTIONS = [
   {
     id: "internet-packages",
     title: "Forfaits internet",
     description: "Ultra - rapide, illimitée et imbattable",
     cta: "Découvrez plus",
-    route: "packages" as const,
+    route: "/packages" as const,
     icon: Wifi,
     color: "navy",
   },
@@ -262,7 +299,7 @@ export const SERVICE_OPTIONS = [
     title: "Données mobiles",
     description: "Restez connecté en mobilité avec nos forfaits data flexibles",
     cta: "Bientôt disponible",
-    route: "products-and-services" as const,
+    route: "/produits-et-services" as const,
     icon: Tv,
     color: "orange",
     comingSoon: true,
@@ -272,7 +309,7 @@ export const SERVICE_OPTIONS = [
     title: "Équipements & Routeurs",
     description: "Routeurs Wi-Fi dernière génération pour une couverture optimale",
     cta: "En savoir plus",
-    route: "packages" as const,
+    route: "/packages" as const,
     icon: RouterIcon,
     color: "navy",
   },
@@ -281,10 +318,17 @@ export const SERVICE_OPTIONS = [
     title: "Support dédié",
     description: "Une équipe d'experts à votre écoute, 7j/7 pour vous accompagner",
     cta: "Nous contacter",
-    route: "contact-us" as const,
+    route: "/contact" as const,
     icon: Headphones,
     color: "orange",
   },
+];
+
+export const HOW_IT_WORKS_STEPS_EN: { title: string; description: string }[] = [
+  { title: "Check coverage", description: "Check that you are in an area covered by our fiber network." },
+  { title: "Order online", description: "Order your bundle online and pay directly." },
+  { title: "Fast installation", description: "Wait up to 5 working days for installation by our technicians." },
+  { title: "Customer service 4757", description: "Call customer service at 4757 for any concern." },
 ];
 
 export const HOW_IT_WORKS_STEPS = [
@@ -311,6 +355,33 @@ export const STATS = [
   { value: "300", label: "Mbps max" },
   { value: "24/7", label: "Support local" },
   { value: "5j", label: "Installation" },
+];
+
+export const FAQ_ITEMS_EN: { question: string; answer: string }[] = [
+  {
+    question: "How do I check whether Liquid Home is available in my area?",
+    answer: "Use the availability check form at the top of every page. Enter your street address and house number to instantly find out whether Liquid Home fiber is accessible to you.",
+  },
+  {
+    question: "What are the installation lead times?",
+    answer: "Installation is generally completed within 5 working days after your contract is signed. Our technicians travel to your home in Kinshasa free of charge.",
+  },
+  {
+    question: "Are Libota plans really unlimited?",
+    answer: "Yes, all our Libota plans (Flex, Super and Ultra) offer unlimited data volume. Stream, download and play without worrying about your usage.",
+  },
+  {
+    question: "Which plan should I choose for my family?",
+    answer: "For 1 to 3 devices, Libota Flex (75 Mbps) is enough. For a connected family of 4 to 6, Libota Super (200 Mbps) is ideal. For large households or heavy usage (gaming, 4K), go for Libota Ultra (300 Mbps).",
+  },
+  {
+    question: "Can I pay in Congolese Francs (CDF)?",
+    answer: "Our prices are displayed in USD for stability. Payment can be made in USD or in CDF at the current exchange rate through our approved agents.",
+  },
+  {
+    question: "How do I contact customer service?",
+    answer: "Call 4757 (free) or +243 90 300 39 00, Monday to Friday 8am-10pm and weekends 9am-9pm. You can also reach us on WhatsApp at +243 811 023 222.",
+  },
 ];
 
 export const FAQ_ITEMS = [
@@ -362,8 +433,8 @@ export const COVERAGE_AREAS = [
 ];
 
 export const LEGAL_LINKS = [
-  { label: "Politique de confidentialité", route: "privacy-policy" as const },
-  { label: "Politique des cookies", route: "cookies-policy" as const },
+  { label: "Politique de confidentialité", route: "privacy" as const },
+  { label: "Politique des cookies", route: "cookies" as const },
   { label: "Utilisation", route: "usage" as const },
-  { label: "Termes et conditions", route: "terms-and-conditions" as const },
+  { label: "Termes et conditions", route: "terms" as const },
 ];

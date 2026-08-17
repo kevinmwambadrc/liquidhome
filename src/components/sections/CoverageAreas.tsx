@@ -34,7 +34,7 @@ export function CoverageAreas() {
                 </li>
               ))}
             </ul>
-            <button onClick={() => navigate("signup")} className="btn-brand">
+            <button onClick={() => navigate("/souscrire")} className="btn-brand">
               Vérifier mon adresse
             </button>
           </div>

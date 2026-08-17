@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
 
 export async function POST(req: NextRequest) {
   try {
@@ -13,7 +14,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // In a real app, persist to DB / mailing list. Here we simulate success.
+    await db.newsletterSubscriber.upsert({
+      where: { email },
+      update: { name: name || null },
+      create: { email, name: name || null },
+    });
+
     return NextResponse.json({
       ok: true,
       message: `Merci ${name || ""} de vous être abonné ! Vous recevrez bientôt nos actualités à ${email}.`.trim(),

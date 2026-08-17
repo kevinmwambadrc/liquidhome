@@ -20,7 +20,7 @@ import { CONTACT_INFO, HOW_IT_WORKS_STEPS } from "@/lib/content";
 import { useRouter } from "@/lib/router";
 
 export function ContactPage() {
-  const { navigate } = useRouter();
+  const { t, navigate } = useRouter();
   const [form, setForm] = useState({
     first_name: "",
     last_name: "",
@@ -79,8 +79,8 @@ export function ContactPage() {
   return (
     <>
       <PageBanner
-        title="Contact"
-        subtitle="A la maison ou au travail, notre objectif est que vous soyez toujours connectés ! C'est pourquoi vous pouvez compter sur le service client de Liquid Home pour vous fournir une assistance dédiée."
+        title={t("contact.title")}
+        subtitle={t("contact.subtitle")}
       />
 
       <section className="py-12 bg-white">
@@ -357,13 +357,13 @@ export function ContactPage() {
                     ) : (
                       <>
                         <Send className="h-4 w-4" />
-                        Envoyer le message
+                        {t("contact.send")}
                       </>
                     )}
                   </button>
                   <button
                     type="button"
-                    onClick={() => navigate("packages")}
+                    onClick={() => navigate("/packages")}
                     className="px-6 py-3 rounded-md border-2 border-brand-navy text-brand-navy font-semibold hover:bg-brand-navy hover:text-white transition-colors"
                   >
                     Voir les forfaits
